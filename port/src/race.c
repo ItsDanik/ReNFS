@@ -43,6 +43,7 @@
 #include "unpack.h"
 #include "video.h"
 #include "view.h"
+#include <SDL.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -60,6 +61,47 @@ static const char *const track_names[9] = { "cy", "cl", "al", "tr1", "tr2", "tr6
 
 /* 0x36c1c: a car as the menus number it (CONFIG.DAT +0x9b, +0x91) to the game's (the
    names 0xf6b10: 0 the Supra .. 7 the RX-7, 8 a mixed field, 11 the Warrior) */
+/* RENFS_PERF=1, the port's: every 5 seconds of a race, how long its steps and pictures
+   took (at 0 the frame begins, at 2 its steps are done, at 1 it is ready to be shown) */
+static void perf(int at, unsigned steps)
+{
+    static int on = -1;
+    static Uint64 t0, begun, work, worst, frames, stepping;
+    static unsigned steps0;
+    Uint64 now;
+    if (on < 0)
+        on = getenv("RENFS_PERF") && atoi(getenv("RENFS_PERF"));
+    if (!on)
+        return;
+    now = SDL_GetPerformanceCounter();
+    if (!at) {
+        if (!t0 || now - t0 > 30 * SDL_GetPerformanceFrequency()) {   /* (a new race) */
+            t0 = now;
+            work = worst = frames = stepping = 0;
+            steps0 = steps;
+        }
+        begun = now;
+        return;
+    }
+    if (at == 2) {
+        stepping += now - begun;
+        return;
+    }
+    work += now - begun;
+    worst = now - begun > worst ? now - begun : worst;
+    if (++frames, now - t0 >= 5 * SDL_GetPerformanceFrequency()) {
+        double f = (double)SDL_GetPerformanceFrequency(), s = (now - t0) / f;
+        printf("perf: %dx%d smooth %d: %.1f pictures a second, %.1f steps; each %.1f ms, "
+               "the slowest %.1f ms; the steps %.1f ms a picture\n", H(320, 640), H(200, 480), g_smooth,
+               frames / s, (steps - steps0) / s, work * 1000.0 / f / frames, worst * 1000.0 / f,
+               stepping * 1000.0 / f / frames);
+        fflush(stdout);
+        t0 = now;
+        work = worst = frames = stepping = 0;
+        steps0 = steps;
+    }
+}
+
 /* 0x653a4: the race's cars, by their ids (200 + the car the racers, or 100 + the car,
    the far models, for the computer's racers when the settings' +0x87 asks for less
    detail; 400 the police car; below 100 the traffic). A single race: seven of the
@@ -674,6 +716,8 @@ int race_run(void)
     while (!g_quit && !g_pause.quit && !g_timing.result && !g_replay.end) {
         const int *m;
 
+        perf(0, done);
+
         /* the race's steps: one each three ticks of the clock (the race clock's
            three-cycle, race_timer_tick 0x4c454), the player's car driven */
         g_rkeys.race_clock = race_clock(clock_ticks() - start - g_pause.held_ticks);
@@ -700,6 +744,7 @@ int race_run(void)
                 replay_clocks(&done, start, &cam);
             }
         }
+        perf(2, done);
         /* the port's: this frame drawn between the last two steps, by the time since
            the last (smooth.c; F11) */
         smooth_keys();
@@ -840,6 +885,7 @@ int race_run(void)
         if (k == 2)
             g_view_redraw = 1;
         ffdev_tick();
+        perf(1, done);
         video_retrace();
     }
     ff_stop();                 /* (0x63b61) */
