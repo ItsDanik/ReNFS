@@ -288,7 +288,7 @@ every force-feedback command written with the race's step;
 `RENFS_LAPS=n`: n laps of a circuit in `--race` (else the settings' race length, as Control Central `0x437fc`: 8 on TR1 by default);
 `RENFS_CONFIG=f`: a CONFIG.DAT for the test (the original's, `nfsdos.py mem:156c14:5f52:f`).
 `RENFS_SEED=n`: the race's random numbers seeded with n (else the time, as the original).
-`RENFS_RACE=t`: as `--race t` (the MiSTer's launcher gives no arguments); `RENFS_PERF=1`: every 5 s of a race,
+`RENFS_RACE=t`, `RENFS_REPLAY=f`: as `--race t`, `--replay f` (the MiSTer's launcher gives no arguments); `RENFS_PERF=1`: every 5 s of a race,
 the pictures and steps a second, each picture's time, the slowest, the steps' share.
 `RENFS_REPLAYCHECK=1`: a replay played from the start compared with each of its snapshots instead of put back (2: every word that differs).
 `RENFS_SESSION=f`: the original's results (`nfsdos.py mem:` of `0x15cb68`, `0x12a150`, `0x14fae0`)

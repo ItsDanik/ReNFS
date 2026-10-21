@@ -40,7 +40,7 @@ static const char usage[] =
     "  RENFS_NOSOUND=1  no sound\n"
     "  RENFS_SNDWAV=f   write what is heard to the file f (a WAV)\n"
     "  RENFS_THROW=s:x,y,z  a test: at race step s the car given that speed (m/s)\n"
-    "  RENFS_RACE=t     a test: as --race t\n"
+    "  RENFS_RACE=t     a test: as --race t (RENFS_REPLAY=f: --replay f)\n"
     "  RENFS_PERF=1     every 5 seconds of a race: pictures a second and their time\n"
     "  RENFS_SEED=n     a test: the race's random numbers from n (else the clock)\n"
     "  RENFS_PLACE=s:a,c,v  a test: at race step s the opponent put a m ahead of the\n"
@@ -102,6 +102,8 @@ int main(int argc, char **argv)
     }
     if (!race && getenv("RENFS_RACE") && *getenv("RENFS_RACE"))
         race = getenv("RENFS_RACE");        /* (where there are no arguments: the MiSTer's tests) */
+    if (!replay && getenv("RENFS_REPLAY") && *getenv("RENFS_REPLAY"))
+        replay = getenv("RENFS_REPLAY");
 #ifdef MISTER_HYBRID
     /* the MiSTer: the CD's files looked for, "Loading ..." on the core's picture; a
        message that waits for the player to leave the core when they are not all there */
