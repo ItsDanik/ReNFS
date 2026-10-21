@@ -3458,7 +3458,9 @@ same (`build/dos/ppause/`).
 **The pause menu, `race_pause_menu` `0x56474`.** `0x12d9e4` and `0x12f1b8` = 1 (the race
 clock held); every channel stopped (`0x52ab4`); the race's palette kept (getpalette), faded
 down; at 320x200 the mode changed to 640x480 (and back after; at 640x480 the race's own
-off-screen window is used). The mouse put on the row chosen (x 100, y `0x5632c`: 120 170
+off-screen window is used). The mouse kept to the whole screen (`0x56d45`, 0 0 640 480:
+after a replay from this menu the bar's rows are still set, and without it only Quit can
+be reached, the keys' pointer pushed back to it). The mouse put on the row chosen (x 100, y `0x5632c`: 120 170
 217 265 311 360); FRONT_MW.BNK, `pause.asf` played; `check/pause.fsh` (its `!pal` the
 menu's), `check/pause.inv`, and the map `check/<name><segment + 1>.qfs` for the open
 roads, `check/<name>.qfs` for the circuits (names `0x563a4`: cy cl al loop1 loop2 loop6

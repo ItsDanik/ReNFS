@@ -190,6 +190,7 @@ static void menu(void)
         video_mode(640, 480);
     video_rows(0);                         /* (the port's 640x240 and 640x200: all of it) */
     video_lift(0, 0, 0, 0, 0, -1);         /* (nor the bottom HUD lifted) */
+    mouse_limits(0, 0, 640, 480);          /* (0x56d45: a replay's bar rows taken off) */
     place(CONTINUE);
     fe_font_load();
     fe_mouse_load();
