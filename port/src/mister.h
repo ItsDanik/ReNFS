@@ -13,6 +13,11 @@ int mister_on(void);                   /* the core is there */
 /* once a retrace, after the picture was handed over: until the core's next field
    (59.6 a second), whatever the picture's size; so a retrace is a field */
 void mister_retrace_wait(void);
+/* before the picture is handed over: shown at the second field after the one its drawing
+   began in (the framework's drawing ahead, MH_PresentAtField), so that one taking a little
+   longer than a field is still shown in time; a field later than at once. Not with
+   MISTER_HYBRID_AHEAD=0 (the framework's switch, for comparing) */
+void mister_present_at(void);
 
 /* the game's data and the player's files: where the launcher runs the game (the data
    folder, games/dnk/ReNFS/ or on a USB drive), the CD in NFSSE/, the rest in saves/.

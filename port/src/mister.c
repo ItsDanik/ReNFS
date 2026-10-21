@@ -39,6 +39,12 @@ static void menu_mask(void)
 static uint32_t g_field;           /* the field of the last retrace */
 static int g_field_ok;
 
+void mister_present_at(void)
+{
+    if (MH_IsOpen() && g_field_ok)
+        MH_PresentAtField(g_field + 2);
+}
+
 void mister_retrace_wait(void)
 {
     if (!MH_IsOpen())

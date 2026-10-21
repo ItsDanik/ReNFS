@@ -404,6 +404,9 @@ int race_run(void)
     unsigned start, now;
     int mirror_skip = 0, redraw, in_seat = 1, seat, settle = 0, family, fam_kind;
     unsigned done = 0;
+#ifdef MISTER_HYBRID
+    unsigned drawn = ~0u;      /* the step the last picture was drawn at */
+#endif
     const char *car;
 
     /* race_setup_record 0x36c5c: the race as the settings ask: the track (0x12da12,
@@ -745,6 +748,18 @@ int race_run(void)
             }
         }
         perf(2, done);
+#ifdef MISTER_HYBRID
+        /* the port's, on the MiSTer: without smooth motion a picture only for a new step,
+           the one before shown again meanwhile (a 640x480 picture takes longer than a
+           field there; the original, too, draws nothing new between steps) */
+        if (!g_smooth && done == drawn && !g_view_redraw
+            && (g_drive.state == 1 || (g_drive.state == 2 && g_replay.speed == 4))) {
+            ffdev_tick();
+            video_retrace();
+            continue;
+        }
+        drawn = done;
+#endif
         /* the port's: this frame drawn between the last two steps, by the time since
            the last (smooth.c; F11) */
         smooth_keys();

@@ -456,6 +456,7 @@ static void retrace_mister(void)
             memcpy(shown, g_rgb, sizeof shown);
             shown_ok = 1;
         }
+        mister_present_at();
         SDL_UpdateWindowSurface(g_win);
     }
     mister_retrace_wait();
