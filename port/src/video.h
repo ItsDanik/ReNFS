@@ -21,8 +21,21 @@ void video_mode(int w, int h);
 void video_rows(int rows);
 const unsigned char *video_rows_shown(void);   /* a byte a row, 1 shown; 0 all are */
 /* with more rows shown than the picture has: row y's pixels from f (the game's row `row`
-   it stands for; tall.c), 0 the picture's own */
-void video_row_source(const unsigned char *(*f)(int y, int row));
+   it stands for, its pixels `pix` as shown; tall.c), 0 the picture's own */
+void video_row_source(const unsigned char *(*f)(int y, int row, const unsigned char *pix));
+/* (the port's) the bottom HUD lifted `rows` of the picture's rows as it is shown (the
+   MiSTer's HUD (Bottom) margin, hud_lift): each piece's own pixels moved up, where they
+   were the picture `behind` (behind_w a row: what the HUD covers) or a colour; the
+   pointer lifted too from the picture's row pointer_row down (-1 never), the mouse's
+   rows there the bar's own. 0 rows or pieces: none. A video_mode() ends it */
+typedef struct {
+    int x, y, w, h;                /* its box on the screen */
+    const unsigned char *pix;      /* its pixels, w x h, 255 not its own; 0 all of the box */
+    int fill;                      /* where it was: -1 the picture behind, else this colour */
+    const unsigned char *back;     /* or this picture of its box (w x h) */
+} video_piece;
+void video_lift(int rows, const video_piece *p, int n, const unsigned char *behind, int behind_w,
+                int from_row);
 /* setpalette 0x84080: colours first.. from an 8-bit palette; the card keeps 6 bits */
 void video_palette(const unsigned char *pal, int first, int count);
 /* the palette read back from the card (0x98aec): its 6 bits widened, v << 2 | v >> 4 */

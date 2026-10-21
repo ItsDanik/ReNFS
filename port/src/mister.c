@@ -25,13 +25,14 @@ int mister_on(void)
     return MH_IsOpen();
 }
 
-/* the OSD's lines greyed: the HUD margins (bit 0) while the races have 200 or 480 rows,
-   Smooth Motion (bit 1) while they are 640x480 */
+/* the OSD's lines greyed: HUD (Bottom) (bit 0) while the races have 200 rows, Smooth
+   Motion (bit 1) while they are 640x480, HUD (Top) always (bit 2: the status bar stays
+   where the game has it) */
 static void menu_mask(void)
 {
     static int was = -1;
     const int r = mister_resolution();
-    const int mask = (r == MR_320x240 || r == MR_640x240 ? 0 : 1) | (r == MR_640x480 ? 2 : 0);
+    const int mask = (r == MR_320x200 || r == MR_640x200 ? 1 : 0) | (r == MR_640x480 ? 2 : 0) | 4;
     if (mask != was) {
         MH_SetMenuMask(mask);
         was = mask;
@@ -290,6 +291,17 @@ int mister_resolution(void)
         return MR_320x200;
     r = MH_OSD_GAME_BITS(MH_OSDStatus(), 24, 3);
     return r > MR_640x480 ? MR_320x200 : r;
+}
+
+/* the CRT Options' "HUD (Bottom)" (status bits 82..86): the core's entries 0..24 in order,
+   0 the default (the framework's lines start at 10) */
+int mister_hud_bottom(void)
+{
+    int n;
+    if (!MH_IsOpen())
+        return 0;
+    n = (int)(MH_OSDStatusHigh() >> (82 - 64) & 31);
+    return n > 24 ? 24 : n;
 }
 
 /* "D1O[27],Smooth Motion,On,Off": off at 640x480 whatever the line says */

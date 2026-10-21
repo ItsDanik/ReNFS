@@ -23,14 +23,64 @@ static short g_out_row[FB_MAX_H];
 static unsigned char g_out_shown[FB_MAX_H];    /* the game's rows shown: 1 */
 #define OUT_H (g_out_h ? g_out_h : g_fb_h)
 #define OUT_ROW(y) (g_out_h ? g_out_row[y] : (y))
-static const unsigned char *(*g_out_source)(int y, int row);
+static const unsigned char *(*g_out_source)(int y, int row, const unsigned char *pix);
+
+/* (the port's) the bottom HUD lifted (video_lift): its pieces `g_lift` rows up as they
+   are shown, what is behind them where they were */
+static int g_lift, g_lift_n, g_lift_pointer;
+static video_piece g_lift_piece[4];
+static const unsigned char *g_lift_back;
+static int g_lift_back_w;
+static unsigned char g_lift_row[FB_MAX_W];
+
+/* the game's row `row` as shown: with the pieces lifted */
+static const unsigned char *fb_row(int row)
+{
+    const unsigned char *src = g_fb + (long)row * g_fb_w;
+    int i, x, copied = 0;
+
+    for (i = 0; i < g_lift_n && g_lift; i++) {
+        const video_piece *p = &g_lift_piece[i];
+        int up = row + g_lift - p->y, here = row - p->y;
+        int in_up = up >= 0 && up < p->h, in_here = here >= 0 && here < p->h;
+        int x0 = p->x < 0 ? 0 : p->x, x1 = p->x + p->w > g_fb_w ? g_fb_w : p->x + p->w;
+
+        if (!in_up && !in_here)
+            continue;
+        if (!copied) {
+            memcpy(g_lift_row, src, (size_t)g_fb_w);
+            copied = 1;
+        }
+        for (x = x0; x < x1; x++) {
+            int c = x - p->x;
+            if (in_up && (!p->pix || p->pix[up * p->w + c] != 255))
+                g_lift_row[x] = src[(long)g_lift * g_fb_w + x];
+            else if (in_here && (!p->pix || p->pix[here * p->w + c] != 255))
+                g_lift_row[x] = p->back ? p->back[here * p->w + c]
+                              : p->fill >= 0 ? (unsigned char)p->fill
+                              : g_lift_back ? g_lift_back[(long)row * g_lift_back_w + x] : src[x];
+        }
+    }
+    return copied ? g_lift_row : src;
+}
 
 /* the pixels of the row shown y */
 static const unsigned char *out_row(int y)
 {
     if (g_out_source && g_out_h > g_fb_h)
-        return g_out_source(y, OUT_ROW(y));
-    return g_fb + OUT_ROW(y) * g_fb_w;
+        return g_out_source(y, OUT_ROW(y), fb_row(OUT_ROW(y)));
+    return fb_row(OUT_ROW(y));
+}
+
+static int g_mouse_x = 320, g_mouse_y = 240, g_mouse_buttons;
+
+/* the pointer's row shown, from the mouse's (640x480's): lifted with the bar it is over */
+static int pointer_row(void)
+{
+    int y = g_mouse_y;
+    if (g_lift && g_lift_pointer >= 0 && y * g_fb_h / 480 >= g_lift_pointer)
+        y -= g_lift * 480 / g_fb_h;
+    return (y < 0 ? 0 : y) * OUT_H / 480;
 }
 int g_quit;
 
@@ -71,7 +121,6 @@ static void scan_put(int scan)
 }
 
 /* the mouse, in the 640x480 picture's pixels, and its pointer drawn over the picture */
-static int g_mouse_x = 320, g_mouse_y = 240, g_mouse_buttons;
 static int g_lim_x0 = 0, g_lim_y0 = 0, g_lim_x1 = 639, g_lim_y1 = 479;
 
 static void mouse_clamp(void)
@@ -265,6 +314,7 @@ void video_mode(int w, int h)
     g_fb_w = w;
     g_fb_h = h;
     g_out_h = 0;
+    g_lift = 0;
     memset(g_fb, 0, sizeof g_fb);
 #ifdef MISTER_HYBRID
     if (g_mister) {
@@ -311,9 +361,21 @@ const unsigned char *video_rows_shown(void)
     return g_out_h && g_out_h < g_fb_h ? g_out_shown : 0;
 }
 
-void video_row_source(const unsigned char *(*f)(int y, int row))
+void video_row_source(const unsigned char *(*f)(int y, int row, const unsigned char *pix))
 {
     g_out_source = f;
+}
+
+void video_lift(int rows, const video_piece *p, int n, const unsigned char *behind, int behind_w,
+                int from_row)
+{
+    g_lift = rows > 0 && n > 0 ? rows : 0;
+    g_lift_n = n > 4 ? 4 : n;
+    if (g_lift_n > 0)
+        memcpy(g_lift_piece, p, (size_t)g_lift_n * sizeof *p);
+    g_lift_back = behind;
+    g_lift_back_w = behind_w;
+    g_lift_pointer = from_row;
 }
 
 void video_palette(const unsigned char *pal, int first, int count)
@@ -356,9 +418,13 @@ static void write_shot(void)
         return;
     }
     fprintf(f, "P6\n%d %d\n255\n", g_fb_w, OUT_H);
+    const unsigned char *row = 0;
+    const int py = pointer_row();
     for (int i = 0; i < g_fb_w * OUT_H; i++) {
-        int x = i % g_fb_w - g_mouse_x * g_fb_w / 640, y = i / g_fb_w - g_mouse_y * OUT_H / 480;
-        unsigned char v = out_row(i / g_fb_w)[i % g_fb_w];
+        int x = i % g_fb_w - g_mouse_x * g_fb_w / 640, y = i / g_fb_w - py;
+        if (i % g_fb_w == 0)
+            row = out_row(i / g_fb_w);
+        unsigned char v = row[i % g_fb_w];
         if (g_cursor && g_cursor_on && x >= 0 && y >= 0 && x < g_cursor_w &&
             y < g_cursor_h && g_cursor[y * g_cursor_w + x] != 255)
             v = g_cursor[y * g_cursor_w + x];  /* the pointer, as on the screen */
@@ -398,6 +464,10 @@ static void poll(void)
                 my = my * 480 / OUT_H;
             }
 #endif
+            /* (over the lifted bar: the bar's own rows) */
+            if (g_lift && g_lift_pointer >= 0
+                && my * g_fb_h / 480 >= g_lift_pointer - g_lift)
+                my += g_lift * 480 / g_fb_h;
             g_mouse_x = mx < 0 ? 0 : mx > 639 ? 639 : mx;
             g_mouse_y = my < 0 ? 0 : my > 479 ? 479 : my;
             mouse_clamp();
@@ -490,7 +560,7 @@ static void retrace_mister(void)
         for (int y = 0; y < OUT_H; y++)
             memcpy(px + y * s->pitch, out_row(y), (size_t)g_fb_w);
         if (g_cursor && g_cursor_on) {
-            int mx = g_mouse_x * g_fb_w / 640, my = g_mouse_y * OUT_H / 480;
+            int mx = g_mouse_x * g_fb_w / 640, my = pointer_row();
             for (int y = 0; y < g_cursor_h && my + y < OUT_H; y++)
                 for (int x = 0; x < g_cursor_w && mx + x < g_fb_w; x++) {
                     unsigned char c = g_cursor[y * g_cursor_w + x];
@@ -498,7 +568,11 @@ static void retrace_mister(void)
                         px[(my + y) * s->pitch + mx + x] = c;
                 }
         }
-        if (!shown_ok || memcmp(shown, g_rgb, sizeof shown)) {
+        /* new colours: the framework sets them at once, so their picture goes at once too
+           (not drawn ahead, mister_present_at), else the picture before would be shown
+           a field in them (a movie's key frames, the police's ticket) */
+        int new_colours = !shown_ok || memcmp(shown, g_rgb, sizeof shown);
+        if (new_colours) {
             SDL_Color c[256];
             for (int i = 0; i < 256; i++) {
                 c[i].r = (Uint8)(g_rgb[i] >> 16);
@@ -510,7 +584,8 @@ static void retrace_mister(void)
             memcpy(shown, g_rgb, sizeof shown);
             shown_ok = 1;
         }
-        mister_present_at();
+        if (!new_colours)
+            mister_present_at();
         SDL_UpdateWindowSurface(g_win);
     }
     mister_retrace_wait();
@@ -542,7 +617,7 @@ void video_retrace(void)
         /* the pointer (0x81600: its top left corner at the mouse; 255 is see-through) */
         /* (the mouse is kept in 640x480's pixels: at 320x200 in the race's) */
         if (g_cursor && g_cursor_on) {
-            int mx = g_mouse_x * g_fb_w / 640, my = g_mouse_y * OUT_H / 480;
+            int mx = g_mouse_x * g_fb_w / 640, my = pointer_row();
             for (int y = 0; y < g_cursor_h && my + y < OUT_H; y++)
                 for (int x = 0; x < g_cursor_w && mx + x < g_fb_w; x++) {
                     unsigned char c = g_cursor[y * g_cursor_w + x];
@@ -876,7 +951,7 @@ void mouse_place(int x, int y)
     y = g_mouse_y;
 #ifdef MISTER_HYBRID
     if (g_mister) {
-        SDL_WarpMouseInWindow(g_win, x * g_fb_w / 640, y * OUT_H / 480);
+        SDL_WarpMouseInWindow(g_win, x * g_fb_w / 640, pointer_row());
         return;
     }
 #endif

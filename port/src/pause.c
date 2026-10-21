@@ -189,6 +189,7 @@ static void menu(void)
     if (!g_view_res)
         video_mode(640, 480);
     video_rows(0);                         /* (the port's 640x240 and 640x200: all of it) */
+    video_lift(0, 0, 0, 0, 0, -1);         /* (nor the bottom HUD lifted) */
     place(CONTINUE);
     fe_font_load();
     fe_mouse_load();

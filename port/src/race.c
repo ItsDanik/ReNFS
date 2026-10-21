@@ -228,6 +228,21 @@ static void race_slide(int car)
     fsh_free(&f);
 }
 
+/* (the port's) the MiSTer's HUD (Bottom): its lines of a 240-line screen as the screen's
+   rows; none while 200 rows are shown (RENFS_HUDBOTTOM=n for a test) */
+static int hud_bottom_rows(void)
+{
+    int lines = 0, shown = g_race_rows ? g_race_rows : H(200, 480);
+#ifdef MISTER_HYBRID
+    if (mister_on())
+        lines = mister_hud_bottom();
+#endif
+    if (getenv("RENFS_HUDBOTTOM"))
+        lines = atoi(getenv("RENFS_HUDBOTTOM"));
+    lines = lines < 0 ? 0 : lines > 24 ? 24 : lines;
+    return shown >= 240 ? lines * H(200, 480) / 240 : 0;
+}
+
 static int quarter(int node)
 {
     return node >= 0 ? node / 4 : -(-node / 4);
@@ -912,6 +927,7 @@ int race_run(void)
         } else
             hud_outside_frame(&driver, redraw, cam.ahead->current);
         in_seat = seat;
+        hud_lift(hud_bottom_rows());
         smooth_restore(&cam);
         /* F9 (0x2f644): the driver's view with the dashboard or without, mode 0's view
            (0xe80f0) and the camera's mode taken up again, the screen round it redrawn */
@@ -968,6 +984,7 @@ int race_run(void)
     g_ncars = 0;
     for (i = 0; i < ncars; i++)
         car_free(&cars[i]);
+    video_lift(0, 0, 0, 0, 0, -1);
     hud_free();
     tall_on(0);
     smoke_free();

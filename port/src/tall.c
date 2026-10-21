@@ -21,9 +21,8 @@ static int tall_row(int y)
 
 /* each row shown (video_rows' map): the view's pixels where the screen still has them,
    from the row as far from y as the lists moved the view, 6/5 of it */
-static const unsigned char *out_row(int y, int row)
+static const unsigned char *out_row(int y, int row, const unsigned char *fb)
 {
-    const unsigned char *fb = g_fb + (long)row * TALL_W;
     const int *from = g_from + (long)row * TALL_W;
     const unsigned short *when = g_when + (long)row * TALL_W;
     int x;

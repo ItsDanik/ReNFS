@@ -73,6 +73,10 @@ static void hud_keys(void);
 static unsigned char *g_mmb, *g_mask_b[12];
 static const unsigned char *g_lists[2][12];
 static int g_tach_c[2], g_tach_r[2];
+/* (the port's, for hud_lift) what the small rev counter covers in the view's picture
+   before it is put there (the border under the view), and that with the view's pixels
+   where the view has been painted over it since */
+static unsigned char *g_tach_back, *g_tach_behind;
 int g_hud_small_needle[4];
 /* the replay's bar (0x5f240): its strip, each button's look (normal, lit, pressed), the
    cameras' and the speeds' labels (normal, lit) */
@@ -351,6 +355,9 @@ void hud_free(void)
     g_ticket_on = 0;
     free(g_hud_map_back.pix);
     free(g_hud_view.pix);
+    free(g_tach_back);
+    free(g_tach_behind);
+    g_tach_back = g_tach_behind = 0;
     free(g_hud_map.pix);
     free(g_hud_mirror.pix);
     g_hud_map_back.pix = g_hud_view.pix = g_hud_map.pix = g_hud_mirror.pix = 0;
@@ -1231,17 +1238,22 @@ static void watch_draw(void)
    crash's view 13 as 3); the whole bar when asked, else the time and how far through
    the recording (a dark green line 122 long over black) when the counter moved; the
    mouse's pointer, pressed while a button is */
+/* (the port's: what this frame has at the bottom, for hud_lift) */
+static int g_lift_bar, g_lift_outside;
+
 void hud_bar_draw(void)
 {
     int w;
 
     if (g_drive.state == 1) {
-        if (g_drive.viewed != g_player || g_hud.stopped)
+        if (g_drive.viewed != g_player || g_hud.stopped) {
             watch_draw();
-        else
+            g_lift_bar = 1;
+        } else
             mouse_show(0);
         return;
     }
+    g_lift_bar = 1;
     if (g_hud.cam_mode >= 0 && g_hud.cam_mode < 8 && g_bar.cam != g_hud.cam_mode) {
         g_bar.cam = g_hud.cam_mode;
         g_bar.redraw = 1;
@@ -1435,6 +1447,30 @@ static void blit_centred(const unsigned char *head, int x, int y)
     blit(head, x - s16(head + 8), y - s16(head + 0xa), COPY);
 }
 
+
+static void tach_keep_back(void)
+{
+    const unsigned char *t = named(&g_mask, "tach");
+    int x0, y0, w, h, y;
+
+    if (!t)
+        return;
+    x0 = s16(t + 0xc), y0 = s16(t + 0xe), w = s16(t + 4), h = s16(t + 6);
+    free(g_tach_back);
+    free(g_tach_behind);
+    g_tach_back = malloc((size_t)(w * h));
+    g_tach_behind = malloc((size_t)(w * h));
+    if (!g_tach_back || !g_tach_behind || x0 < 0 || y0 < 0 || x0 + w > g_hud_view.w
+        || y0 + h > g_hud_view.h) {
+        free(g_tach_back);
+        free(g_tach_behind);
+        g_tach_back = g_tach_behind = 0;
+        return;
+    }
+    for (y = 0; y < h; y++)
+        memcpy(g_tach_back + y * w, g_hud_view.pix + (long)(y0 + y) * g_hud_view.w + x0, (size_t)w);
+}
+
 void hud_outside_screen(const int box[4])
 {
     const unsigned char *tile = named(&g_mask, "0000"), *top = named(&g_mask, "b00t");
@@ -1467,6 +1503,7 @@ void hud_outside_screen(const int box[4])
     blit_centred(named(&g_mask, "b001"), x1, y0);
     blit_centred(named(&g_mask, "b002"), x1, y1);
     blit_centred(named(&g_mask, "b003"), x0, y1);
+    tach_keep_back();
     blit_own(named(&g_mask, "tach"), SEE_THROUGH);
     numbers_reset();
 }
@@ -1530,6 +1567,7 @@ void hud_outside_frame(const hud_car *c, int redraw, int layout)
     hud_keys();
     bar_numbers(c);
     small_tach(c);
+    g_lift_outside = 1;
     if (g_hud.map && g_hud_map.pix)
         blit_pixels(g_hud_map.pix, g_hud_map.w, g_hud_map.h, H(0x103, 0x206), H(0x7e, 0x130), COPY);
     hud_bar_draw();            /* 0x5c5d0 */
@@ -1725,4 +1763,45 @@ void hud_mirror_flip(void)
             r[g_hud_mirror.w - 1 - i] = t;
         }
     }
+}
+
+void hud_lift(int rows)
+{
+    video_piece p[3];
+    int n = 0;
+
+    if (rows > 0 && g_lift_outside) {
+        /* outside: the small rev counter (its own pixels) and the map */
+        const unsigned char *t = named(&g_mask, "tach");
+        if (t) {
+            p[n].x = s16(t + 0xc), p[n].y = s16(t + 0xe), p[n].w = s16(t + 4), p[n].h = s16(t + 6);
+            p[n].pix = t + 16, p[n].fill = -1, p[n].back = 0;
+            /* behind it the view, or the border where the view's picture still has the
+               dial itself */
+            if (g_tach_back) {
+                int i, k = p[n].w * p[n].h;
+                for (i = 0; i < k; i++) {
+                    unsigned char v = g_hud_view.pix[(long)(p[n].y + i / p[n].w) * g_hud_view.w
+                                                     + p[n].x + i % p[n].w];
+                    g_tach_behind[i] = p[n].pix[i] != 255 && v == p[n].pix[i] ? g_tach_back[i] : v;
+                }
+                p[n].back = g_tach_behind;
+            }
+            n++;
+        }
+        if (g_hud.map && g_hud_map.pix) {
+            p[n].x = H(0x103, 0x206), p[n].y = H(0x7e, 0x130);
+            p[n].w = g_hud_map.w, p[n].h = g_hud_map.h;
+            p[n].pix = 0, p[n].fill = -1, p[n].back = 0;
+            n++;
+        }
+    }
+    if (rows > 0 && g_lift_bar) {
+        /* the replay's or the watching bar: black under it */
+        p[n].x = 0, p[n].y = H(0xb4, 0x1c0), p[n].w = H(320, 640), p[n].h = H(20, 32);
+        p[n].pix = 0, p[n].fill = g_hud_colour[HUD_BLACK], p[n].back = 0;
+        n++;
+    }
+    video_lift(rows, p, n, g_hud_view.pix, g_hud_view.w, g_lift_bar ? H(0xb4, 0x1c0) : -1);
+    g_lift_bar = g_lift_outside = 0;
 }

@@ -282,7 +282,7 @@ once; for `--shot` tests);
 `RENFS_THROW=s:x,y,z`: the car given a speed at race step s (to see a crash);
 `RENFS_PLACE=s:a,c,v`: the opponent put a m ahead and c m beside at v m/s at race step s;
 `RENFS_VIEW=n`: the race watched from camera n (outside: 2..5, 8..12);
-`RENFS_RES=320|640`: races at that size whatever the settings say (`320x240`, `640x240`, `640x200`: the MiSTer's sizes);
+`RENFS_RES=320|640`: races at that size whatever the settings say (`320x240`, `640x240`, `640x200`: the MiSTer's sizes); `RENFS_HUDBOTTOM=n`: the bottom HUD lifted n lines (the MiSTer's HUD (Bottom), 240/480-line sizes);
 `RENFS_FF=0..100`: the force feedback's strength (else `renfs.cfg` `forcefeedback`, 100); `RENFS_FFLOG=f`:
 every force-feedback command written with the race's step;
 `RENFS_SMOOTH=0|1`: the motion smoothed between steps or not (F11's setting, `renfs.cfg`, untouched);

@@ -41,6 +41,9 @@ int mister_is_racing(void);
    resolution (320x200 without the core); */
 enum { MR_320x200, MR_320x240, MR_640x200, MR_640x240, MR_640x480 };
 int mister_resolution(void);
+/* the CRT Options' HUD (Bottom): lines of a 240-line screen the bottom HUD is lifted by
+   (hud_lift), 0..24; 0 without the core */
+int mister_hud_bottom(void);
 /* Smooth Motion on (1) or off (always at 640x480); -1 without the core */
 int mister_smooth(void);
 /* Rumble: the force feedback's strength, 100 On, 160 Strong, 0 Off; -1 without the core */

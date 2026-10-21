@@ -4239,6 +4239,23 @@ Danik's five on the core's Resolution line: 320x200, 320x240, 640x200, 640x240, 
   row as the list moved the view (6/5 of it: the cockpit's view sits 17 rows down). Without
   a seam at the windscreen's edges; the pause menu (640x480) and the race after it right.
   0.2 ms more a picture than 320x200 on the PC.
+- **HUD (Bottom)** (Danik, 2026-10-22: a CRT's overscan hid the replay's bar; 0 by default,
+  HUD (Top) always greyed: the status bar stays): in the 240- and 480-line sizes the
+  bottom HUD is lifted by that many lines of a 240-line screen (`hud_lift`, `video_lift`):
+  the replay's or the watching bar, and from outside the small rev counter (its own pixels,
+  not its box) and the map. Done as the rows go out, after the game has drawn: the pieces
+  are on the screen only (the lists leave their holes in the view), so each piece's pixels
+  are taken from the rows below, and where it was the view's picture shows (the road),
+  black under the bar, and under the rev counter below the view the border it covered
+  (kept when the outside screen is drawn: the view's picture still has the dial there).
+  The pointer is drawn lifted over the bar and the mouse's rows there are the bar's own,
+  so its buttons work where they are seen. Not from the driver's seat but the bar (the
+  dashboard is one picture). `RENFS_HUDBOTTOM=n` tries it on a PC.
+- **The movies' colours on the MiSTer**: the framework switches a new palette at once while
+  a picture drawn ahead waits a field, so every palette change of a movie (30 to 44 in a
+  movie, at key frames) showed the picture before in the new colours for a field (Danik:
+  "a corrupt frame about twice a second"). A picture with new colours is now sent at once,
+  not ahead (`retrace_mister`); the police's ticket had the same field.
 
 ## 5. The original in DOSBox (2026-10-19)
 

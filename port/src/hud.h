@@ -135,6 +135,10 @@ int hud_ticket(int ticket, int warning, int over);
 /* 0x5c5d0, at the end of both frames: playing back the replay's bar (0x5fcf0), racing
    with another car watched or the player stopped the watching bar (0x7ef14) */
 void hud_bar_draw(void);
+/* (the port's) the bottom HUD lifted `rows` of the screen's rows as it is shown (the
+   MiSTer's HUD (Bottom)): the replay's or the watching bar, and from outside the small
+   rev counter and the map, as this frame drew them; once a frame drawn, after the HUD */
+void hud_lift(int rows);
 /* 0x2dac4: the race held by P: "paus" on the screen at its own place */
 void hud_paused(void);
 
