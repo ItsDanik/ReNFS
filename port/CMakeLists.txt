@@ -15,7 +15,7 @@ add_compile_options(-Wall -Wextra -O2 -fwrapv)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(SDL2 REQUIRED sdl2)
 
-add_executable(renfs
+set(RENFS_SOURCES
   src/main.c
   src/files.c
   src/unpack.c
@@ -46,9 +46,27 @@ add_executable(renfs
   src/racepal.c
   src/trackfam.c
 )
-target_include_directories(renfs PRIVATE ${SDL2_INCLUDE_DIRS})
-target_compile_options(renfs PRIVATE ${SDL2_CFLAGS_OTHER})
-target_link_libraries(renfs PRIVATE ${SDL2_LDFLAGS})
+
+# MISTER_HYBRID (branch mister): the MiSTer hybrid core (~/MiSTer-ReNFS). SDL is the
+# framework's, linked statically with its "mister" drivers; src/mister.c is what the
+# core adds (the OSD's options, the picture handed to the core, the pad, the cheats).
+# The sums stay exact (no -ffast-math): the races and replays must be the PC's.
+option(MISTER_HYBRID "Build for the MiSTer hybrid core (needs SDL2 with the MiSTer drivers)" OFF)
+if(MISTER_HYBRID)
+  add_executable(renfs ${RENFS_SOURCES} src/mister.c src/mister_files.c)
+  target_compile_definitions(renfs PRIVATE MISTER_HYBRID=1)
+  target_include_directories(renfs PRIVATE ${SDL2_STATIC_INCLUDE_DIRS})
+  target_compile_options(renfs PRIVATE ${SDL2_STATIC_CFLAGS_OTHER})
+  target_link_libraries(renfs PRIVATE ${SDL2_STATIC_LDFLAGS} m)
+  if(CMAKE_SYSTEM_PROCESSOR STREQUAL "arm")
+    target_compile_options(renfs PRIVATE -O3 -marm)
+  endif()
+else()
+  add_executable(renfs ${RENFS_SOURCES})
+  target_include_directories(renfs PRIVATE ${SDL2_INCLUDE_DIRS})
+  target_compile_options(renfs PRIVATE ${SDL2_CFLAGS_OTHER})
+  target_link_libraries(renfs PRIVATE ${SDL2_LDFLAGS})
+endif()
 
 # the version (../VERSION + commits since, see tools/version.sh), looked up at every build
 add_custom_target(renfs_version

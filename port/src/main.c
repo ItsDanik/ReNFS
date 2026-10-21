@@ -11,6 +11,7 @@
 #include "replay.h"
 #include "smooth.h"
 #include "video.h"
+#include "mister.h"
 #include "renfs_version.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -97,6 +98,12 @@ int main(int argc, char **argv)
             return strcmp(argv[i], "--help") && strcmp(argv[i], "-h") ? 1 : 0;
         }
     }
+#ifdef MISTER_HYBRID
+    /* the MiSTer: the CD's files looked for, "Loading ..." on the core's picture; a
+       message that waits for the player to leave the core when they are not all there */
+    if (!shot && !mister_start())
+        return mister_exit_code();
+#endif
     if (!files_init(data, home)) {
         files_error(data || getenv("RENFS_DATA")
                     ? "The game's files are not in the folder given (FRONTEND/ART/TITLE.QFS is missing)."
@@ -133,5 +140,9 @@ int main(int argc, char **argv)
     ff_close();                /* (main 0x47219) */
     audio_done();
     video_done();
+#ifdef MISTER_HYBRID
+    return mister_exit_code();
+#else
     return 0;
+#endif
 }

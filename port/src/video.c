@@ -8,6 +8,7 @@
 #include "video.h"
 #include "files.h"
 #include "ffdev.h"
+#include "mister.h"
 #include <SDL.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,6 +24,12 @@ static SDL_Texture *g_tex;
 static unsigned char g_dac[768];        /* 6 bits a channel, as the card's */
 static unsigned char g_pal8[768];       /* as given, 8 bits (0x1607a4, kept by 0x83fe4) */
 static unsigned g_rgb[256];
+
+#ifdef MISTER_HYBRID
+/* the MiSTer's core is there: the window's surface is the core's picture, 8 bits a pixel
+   through the palette (SDL's "mister" driver; its size picks the core's mode) */
+static int g_mister;
+#endif
 
 static const char *g_shot;
 static int g_shot_at;
@@ -178,10 +185,30 @@ int video_init(const char *shot, int shot_frames)
     g_ffdev_joystick = joy_sdl;    /* (the force feedback's device) */
     if (shot)
         SDL_setenv("SDL_VIDEODRIVER", "dummy", 1);
+#ifdef MISTER_HYBRID
+    if (!shot && mister_on()) {
+        g_mister = 1;
+        SDL_SetHint("SDL_MISTER_VIDEO_FORMAT", "INDEX8");
+        SDL_SetHint("SDL_MISTER_DIRECT", "1");     /* the surface is the core's next picture */
+    }
+#endif
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0) {
         fprintf(stderr, "SDL: %s\n", SDL_GetError());
         return 0;
     }
+#ifdef MISTER_HYBRID
+    if (g_mister) {
+        if (!(g_win = SDL_CreateWindow("ReNFS", 0, 0, 640, 480, 0))) {
+            fprintf(stderr, "SDL: %s\n", SDL_GetError());
+            return 0;
+        }
+        video_mode(640, 480);
+        script_parse(getenv("RENFS_INPUT"));
+        g_start_ms = SDL_GetTicks();
+        g_start_pc = SDL_GetPerformanceCounter();
+        return 1;
+    }
+#endif
     g_win = SDL_CreateWindow("ReNFS", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
                              1280, 960, SDL_WINDOW_RESIZABLE);
     if (!g_win) {
@@ -222,6 +249,12 @@ void video_mode(int w, int h)
     g_fb_w = w;
     g_fb_h = h;
     memset(g_fb, 0, sizeof g_fb);
+#ifdef MISTER_HYBRID
+    if (g_mister) {
+        SDL_SetWindowSize(g_win, w, h);
+        return;
+    }
+#endif
     if (g_tex)
         SDL_DestroyTexture(g_tex);
     g_tex = SDL_CreateTexture(g_ren, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, w, h);
@@ -304,8 +337,15 @@ static void poll(void)
             mouse_clamp();
         } else if (e.type == SDL_MOUSEMOTION) {
             /* the renderer's logical size: already the 640x480 picture's pixels */
-            g_mouse_x = e.motion.x < 0 ? 0 : e.motion.x > 639 ? 639 : e.motion.x;
-            g_mouse_y = e.motion.y < 0 ? 0 : e.motion.y > 479 ? 479 : e.motion.y;
+            int mx = e.motion.x, my = e.motion.y;
+#ifdef MISTER_HYBRID
+            if (g_mister) {                    /* (the window is the picture's size) */
+                mx = mx * 640 / g_fb_w;
+                my = my * 480 / g_fb_h;
+            }
+#endif
+            g_mouse_x = mx < 0 ? 0 : mx > 639 ? 639 : mx;
+            g_mouse_y = my < 0 ? 0 : my > 479 ? 479 : my;
             mouse_clamp();
         } else if (e.type == SDL_MOUSEBUTTONDOWN || e.type == SDL_MOUSEBUTTONUP) {
             int bit = e.button.button == SDL_BUTTON_LEFT ? 1 : e.button.button == SDL_BUTTON_RIGHT ? 2 : 0;
@@ -370,11 +410,60 @@ static void poll(void)
     }
 }
 
+#ifdef MISTER_HYBRID
+/* the picture to the core: the palette numbers as they are, the pointer over them, the
+   palette when it changed; then the next field */
+static void retrace_mister(void)
+{
+    SDL_Surface *s = SDL_GetWindowSurface(g_win);
+    if (s && s->format->BytesPerPixel == 1 && s->format->palette && s->w == g_fb_w && s->h == g_fb_h) {
+        static unsigned shown[256];
+        static int shown_ok;
+        unsigned char *px = s->pixels;
+        for (int y = 0; y < g_fb_h; y++)
+            memcpy(px + y * s->pitch, g_fb + y * g_fb_w, (size_t)g_fb_w);
+        if (g_cursor && g_cursor_on) {
+            int mx = g_mouse_x * g_fb_w / 640, my = g_mouse_y * g_fb_h / 480;
+            for (int y = 0; y < g_cursor_h && my + y < g_fb_h; y++)
+                for (int x = 0; x < g_cursor_w && mx + x < g_fb_w; x++) {
+                    unsigned char c = g_cursor[y * g_cursor_w + x];
+                    if (c != 255)
+                        px[(my + y) * s->pitch + mx + x] = c;
+                }
+        }
+        if (!shown_ok || memcmp(shown, g_rgb, sizeof shown)) {
+            SDL_Color c[256];
+            for (int i = 0; i < 256; i++) {
+                c[i].r = (Uint8)(g_rgb[i] >> 16);
+                c[i].g = (Uint8)(g_rgb[i] >> 8);
+                c[i].b = (Uint8)g_rgb[i];
+                c[i].a = 255;
+            }
+            SDL_SetPaletteColors(s->format->palette, c, 0, 256);
+            memcpy(shown, g_rgb, sizeof shown);
+            shown_ok = 1;
+        }
+        SDL_UpdateWindowSurface(g_win);
+    }
+    mister_retrace_wait();
+}
+#endif
+
 void video_retrace(void)
 {
     void *pixels;
     int pitch;
     poll();
+#ifdef MISTER_HYBRID
+    if (g_mister) {
+        retrace_mister();
+        g_retraces++;
+        g_virtual_ms += 4200 / retrace_rate();
+        if (g_retrace_hook)
+            g_retrace_hook();
+        return;
+    }
+#endif
     if (SDL_LockTexture(g_tex, 0, &pixels, &pitch) == 0) {
         for (int y = 0; y < g_fb_h; y++) {
             unsigned *row = (unsigned *)((char *)pixels + y * pitch);
@@ -705,6 +794,12 @@ void mouse_place(int x, int y)
     mouse_clamp();
     x = g_mouse_x;
     y = g_mouse_y;
+#ifdef MISTER_HYBRID
+    if (g_mister) {
+        SDL_WarpMouseInWindow(g_win, x * g_fb_w / 640, y * g_fb_h / 480);
+        return;
+    }
+#endif
     if (!g_shot && (SDL_GetWindowFlags(g_win) & SDL_WINDOW_MOUSE_FOCUS)) {
         /* the window's pixels from the picture's (the renderer keeps it 4:3, centred) */
         int ww, wh;

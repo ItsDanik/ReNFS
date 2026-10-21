@@ -5,6 +5,7 @@
 #define _GNU_SOURCE
 #endif
 #include "files.h"
+#include "mister.h"
 #include <SDL.h>
 #include <dirent.h>
 #include <stdlib.h>
@@ -126,14 +127,33 @@ const char *files_home(void)
     return g_home;
 }
 
+/* RENFS_FILELOG=<file>: every path of the CD asked for written there, a line each (to
+   know the files the game opens: the MiSTer's check of the CD, tools/mister_files.sh) */
+static void file_logged(const char *rel)
+{
+    static FILE *log;
+    static int tried;
+    if (!tried) {
+        tried = 1;
+        if (getenv("RENFS_FILELOG"))
+            log = fopen(getenv("RENFS_FILELOG"), "a");
+    }
+    if (log) {
+        fprintf(log, "%s\n", rel);
+        fflush(log);
+    }
+}
+
 int file_path(const char *rel, char *out, size_t size)
 {
+    file_logged(rel);
     return resolve(g_data, rel, out, size);
 }
 
 FILE *file_open(const char *rel)
 {
     char path[1024];
+    file_logged(rel);
     if (!resolve(g_data, rel, path, sizeof path))
         return 0;
     return fopen(path, "rb");
@@ -245,6 +265,12 @@ void files_error(const char *text)
     const char *drv = SDL_getenv("SDL_VIDEODRIVER");
 
     fprintf(stderr, "renfs: %s\n", text);
+#ifdef MISTER_HYBRID
+    if (mister_on()) {                 /* on the core's picture, until the player leaves */
+        mister_fatal(text);
+        return;
+    }
+#endif
     if (!drv || strcmp(drv, "dummy"))
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "ReNFS", text, 0);
 }
