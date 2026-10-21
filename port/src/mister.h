@@ -63,9 +63,6 @@ void mister_force_sine(int slot, int magnitude, int period_ms);
 void mister_force_stop(int slot);
 void mister_force_keep(void);
 
-/* the core's OSD menu is open (a race is held meanwhile) */
-int mister_osd_open(void);
-
 /* a message on the core's picture that stays until the player leaves the core */
 void mister_fatal(const char *text);
 /* what the process ends with: the launcher's contract */

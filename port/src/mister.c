@@ -278,11 +278,6 @@ int mister_is_racing(void)
     return g_racing;
 }
 
-int mister_osd_open(void)
-{
-    return MH_IsOpen() && MH_OSDOpen();
-}
-
 /* "O[26:24],Resolution,320x200,320x240,640x200,640x240,640x480" */
 int mister_resolution(void)
 {

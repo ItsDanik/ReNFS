@@ -440,8 +440,8 @@ use of it.**
 Done on the branch: `MISTER_HYBRID` builds (`./build.sh host` against fakecore, `./build.sh
 mister` for the ARM); `mister.c` (the core, the CD's files looked for at the start against
 `mister_files.c`, the pad as the original's joystick, Menu OK/Back, Start = Esc, R3 nitro,
-the OSD's resolution, smooth motion, rumble and the Cheats page, the race held while the
-OSD is open); names typed with the d-pad (`menu.c`); no calibration screen (a fixed one);
+the OSD's resolution, smooth motion, rumble and the Cheats page; the race runs on while
+the OSD is open, as on Danik's other cores, so HUD (Bottom) is seen moving); names typed with the d-pad (`menu.c`); no calibration screen (a fixed one);
 the steering and pedals given as a joystick's whenever the core is there. `RENFS_FILELOG`
 lists every path the game asks for; `tools/mister_files.py NFSSE --check <log>` found none
 outside the list. The ARM build plays the CD's replays equal under qemu.
