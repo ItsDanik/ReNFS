@@ -71,6 +71,7 @@ static void replay_from_menu(int sel)
     config_set_word(0xaf, sel == REPLAY ? 1 : 2);
     fe_sound_unmute();         /* (0xf748e: F5's silence ends) */
     race_run();
+    mouse_limits(0, 0, 640, 480);              /* (0x1af4f, 0x1bf83: the replay bar's off) */
     {
         /* what the original keeps lies in 0x15cb68 .. 0x15d11e; the rest is the
            replay's own end (0x68ab0 runs after a replay too) */

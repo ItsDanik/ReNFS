@@ -127,6 +127,7 @@ int fe_attract_mode(void)
             fclose(f);
             stopped = race_run() == 0x40;      /* (race_run: 1 for the attract mode's
                                                   0x40) */
+            mouse_limits(0, 0, 640, 480);      /* (0x3437e: the replay bar's taken off) */
         }
         config_set_word(0xaf, 0);
     }

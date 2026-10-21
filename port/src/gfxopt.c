@@ -134,8 +134,8 @@ int fe_graphics_options(int where)
 
 #ifdef MISTER_HYBRID
         /* (the MiSTer's: the races' resolution is the OSD's; this row shows it) */
-        if (mister_on() && config_word(CFG_RESOLUTION) != (mister_resolution() == 2 ? 0 : 1)) {
-            config_set_word(CFG_RESOLUTION, mister_resolution() == 2 ? 0 : 1);
+        if (mister_on() && config_word(CFG_RESOLUTION) != (mister_resolution() == MR_640x480 ? 0 : 1)) {
+            config_set_word(CFG_RESOLUTION, mister_resolution() == MR_640x480 ? 0 : 1);
             if (config_word(CFG_RESOLUTION) == 1 && config_word(CFG_QUALITY) > 1)
                 config_set_word(CFG_QUALITY, 1);
             redraw = 1;

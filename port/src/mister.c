@@ -25,11 +25,13 @@ int mister_on(void)
     return MH_IsOpen();
 }
 
-/* the OSD's lines greyed: the HUD margins (bit 0) while the races are not 320x240 */
+/* the OSD's lines greyed: the HUD margins (bit 0) while the races have 200 or 480 rows,
+   Smooth Motion (bit 1) while they are 640x480 */
 static void menu_mask(void)
 {
     static int was = -1;
-    const int mask = mister_resolution() == 1 ? 0 : 1;
+    const int r = mister_resolution();
+    const int mask = (r == MR_320x240 || r == MR_640x240 ? 0 : 1) | (r == MR_640x480 ? 2 : 0);
     if (mask != was) {
         MH_SetMenuMask(mask);
         was = mask;
@@ -280,33 +282,35 @@ int mister_osd_open(void)
     return MH_IsOpen() && MH_OSDOpen();
 }
 
-/* "O[25:24],Resolution,320x200,320x240,640x480" */
+/* "O[26:24],Resolution,320x200,320x240,640x200,640x240,640x480" */
 int mister_resolution(void)
 {
     int r;
     if (!MH_IsOpen())
-        return 0;
-    r = MH_OSD_GAME_BITS(MH_OSDStatus(), 24, 2);
-    return r > 2 ? 0 : r;
+        return MR_320x200;
+    r = MH_OSD_GAME_BITS(MH_OSDStatus(), 24, 3);
+    return r > MR_640x480 ? MR_320x200 : r;
 }
 
-/* "O[26],Smooth Motion,On,Off" */
+/* "D1O[27],Smooth Motion,On,Off": off at 640x480 whatever the line says */
 int mister_smooth(void)
 {
-    return MH_IsOpen() ? !MH_OSD_GAME_BITS(MH_OSDStatus(), 26, 1) : -1;
+    if (!MH_IsOpen())
+        return -1;
+    return mister_resolution() != MR_640x480 && !MH_OSD_GAME_BITS(MH_OSDStatus(), 27, 1);
 }
 
-/* "O[28:27],Rumble,On,Strong,Off" */
+/* "O[29:28],Rumble,On,Strong,Off" */
 int mister_rumble_strength(void)
 {
     static const int strength[4] = { 100, 160, 0, 0 };
-    return MH_IsOpen() ? strength[MH_OSD_GAME_BITS(MH_OSDStatus(), 27, 2)] : -1;
+    return MH_IsOpen() ? strength[MH_OSD_GAME_BITS(MH_OSDStatus(), 28, 2)] : -1;
 }
 
-/* "P2O[29],Mirrored Tracks" .. "P2O[37],No Mercy" */
+/* "P2O[30],Mirrored Tracks" .. "P2O[38],No Mercy" */
 int mister_cheats(void)
 {
-    return MH_IsOpen() ? (int)(MH_OSDStatus() >> 29 & 0x1ff) : 0;
+    return MH_IsOpen() ? (int)(MH_OSDStatus() >> 30 & 0x1ff) : 0;
 }
 
 int mister_force_available(void)

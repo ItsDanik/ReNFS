@@ -422,7 +422,7 @@ int race_run(void)
     g_view_res = config_word(0x7f) == 0;
 #ifdef MISTER_HYBRID
     if (mister_on()) {         /* (the MiSTer's: the OSD's Resolution, the settings follow) */
-        g_view_res = mister_resolution() == 2;
+        g_view_res = mister_resolution() == MR_640x480;
         config_set_word(0x7f, !g_view_res);
     }
 #endif
@@ -983,6 +983,7 @@ void race_from_menu(void)
         video_palette(black, 0, 256);
         video_mode(640, 480);
         video_palette(black, 0, 256);
+        mouse_limits(0, 0, 640, 480);          /* (0x37941: the replay bar's taken off) */
         if (g_quit)
             break;
         /* one segment on in the copy; the player's total and top speed for it; the
