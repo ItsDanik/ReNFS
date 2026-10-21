@@ -3,6 +3,7 @@
    a stick with force feedback) or on a pad's rumble, or written down. None of it is the
    original's: only what each command asks for is. */
 #include "ffdev.h"
+#include "mister.h"
 #include "drive.h"
 #include "files.h"
 #include <SDL.h>
@@ -23,6 +24,12 @@ static SDL_Haptic *g_hap;
 static unsigned g_hap_can;
 enum { E_KICK, E_SHAKE_A, E_SHAKE_B, E_RUMBLE, E_STEADY, E_N };
 static int g_effect[E_N];
+
+#ifdef MISTER_HYBRID
+/* or the MiSTer's: a wheel's forces through the core's library (MH_Force*), the I-Force's
+   effects in its slots */
+static int g_mforce;
+#endif
 
 /* else a pad's two motors */
 static SDL_Joystick *g_rumble_joy;
@@ -46,6 +53,10 @@ static void strength_load(void)
         g_strength = 0;
     if (g_strength > 100)
         g_strength = 100;
+#ifdef MISTER_HYBRID
+    if (!e && mister_rumble_strength() >= 0)   /* (the OSD's Rumble: On, Strong 160, Off) */
+        g_strength = mister_rumble_strength();
+#endif
 }
 
 static void haptic_close(void)
@@ -98,15 +109,28 @@ int ffdev_open(void)
             g_effect[i] = -1;
         SDL_HapticSetGain(g_hap, 100);
     }
+#ifdef MISTER_HYBRID
+    g_mforce = !g_hap && g_strength > 0 && mister_force_available();
+    if (g_mforce)
+        joy = 0;
+#endif
     /* (a rumble of nothing tried, not SDL_JoystickHasRumble: SDL 2.0.18's) */
     if (!g_hap && joy && SDL_JoystickRumble(joy, 0, 0, 0) == 0)
         g_rumble_joy = joy;
     g_open = g_hap || g_rumble_joy || g_log;
+#ifdef MISTER_HYBRID
+    g_open |= g_mforce;
+#endif
     return g_open;
 }
 
 void ffdev_close(void)
 {
+#ifdef MISTER_HYBRID
+    if (g_mforce)
+        mister_force_stop(-1);
+    g_mforce = 0;
+#endif
     haptic_close();
     if (g_rumble_joy)
         SDL_JoystickRumble(g_rumble_joy, 0, 0, 0);
@@ -122,7 +146,8 @@ void ffdev_close(void)
 static Sint16 level(int pct)
 {
     int v = pct < 0 ? -pct : pct;
-    return (Sint16)((v > 100 ? 100 : v) * 32767 / 100 * g_strength / 100);
+    v = (v > 100 ? 100 : v) * 32767 / 100 * g_strength / 100;
+    return (Sint16)(v > 32767 ? 32767 : v);
 }
 
 /* SDL's direction is where the force comes from: a push to the right (+across) comes
@@ -221,6 +246,50 @@ static void haptic_send(int cmd, const unsigned char *b)
     }
 }
 
+#ifdef MISTER_HYBRID
+/* ---- on the MiSTer's wheel ---------------------------------------------------------------- */
+
+/* a percent of the I-Force's as the library's -255..255, by the strength */
+static int mlevel(int pct)
+{
+    int v = (pct < -100 ? -100 : pct > 100 ? 100 : pct) * 255 / 100 * g_strength / 100;
+    return v < -255 ? -255 : v > 255 ? 255 : v;
+}
+
+/* the slots: 0 the kicks, 1 and 2 the road's shakes, 3 the crash's rumble, 4 the steady
+   push; across is the wheel's (a wheel has no along) */
+static void mforce_send(int cmd, const unsigned char *b)
+{
+    switch (cmd) {
+    case 0xa1:
+        mister_force_constant(0, mlevel(sbyte(b[0])), b[2] * 10);
+        break;
+    case 0xa4:
+    case 0xa5: {
+        int x = sbyte(b[0]), y = sbyte(b[1]);
+        if (!x && !y && !b[2])
+            mister_force_stop(cmd - 0xa3);
+        else
+            mister_force_sine(cmd - 0xa3, mlevel(abs(x) > abs(y) ? x : y), 1000 / (b[2] ? b[2] : 1));
+        break;
+    }
+    case 0xa6:
+        mister_force_sine(3, mlevel(sbyte(b[0])), 50);    /* (the I-Force's rate unknown) */
+        break;
+    case 0xa7:
+        if (!b[0] && !b[1])
+            mister_force_stop(4);
+        else
+            mister_force_constant(4, mlevel(sbyte(b[0])), 0);
+        break;
+    case 0x82:
+    case 0x84:
+        mister_force_stop(-1);
+        break;
+    }
+}
+#endif
+
 /* ---- on a pad's rumble -------------------------------------------------------------------- */
 
 static void rumble_send(int cmd, const unsigned char *b)
@@ -257,6 +326,10 @@ void ffdev_tick(void)
     Uint32 now;
     int low, high;
 
+#ifdef MISTER_HYBRID
+    if (g_mforce)
+        mister_force_keep();
+#endif
     if (!g_rumble_joy)
         return;
     now = SDL_GetTicks();
@@ -302,6 +375,10 @@ void ffdev_send(int cmd, const unsigned char *b, int n)
     }
     if (g_hap)
         haptic_send(cmd, b);
+#ifdef MISTER_HYBRID
+    else if (g_mforce)
+        mforce_send(cmd, b);
+#endif
     else if (g_rumble_joy)
         rumble_send(cmd, b);
 }

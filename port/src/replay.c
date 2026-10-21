@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "mister.h"
 #include "replay.h"
 #include "joystick.h"
 #include "camera.h"
@@ -144,8 +145,18 @@ void replay_setup_record(void)
     /* (0x36a0c) the steering's, the pedals' and the third control's kinds from the
        controls chosen (CONFIG.DAT +0x5f36, +0x5f38, +0x5f3a): 0 the keys */
     v = config_word(0x5f36);
+#ifdef MISTER_HYBRID
+    /* (the MiSTer's: the pad's stick and triggers analogue whatever the controls say,
+       the keys too, drive_keyboard; Danik, 2026-10-21) */
+    if (v == 0 && g_joy.on && mister_on())
+        v = 1;
+#endif
     wr32(e0 + ENT_STEER, v == 0 ? 0 : v < 4 ? 1 : 2);
     v = config_word(0x5f38);
+#ifdef MISTER_HYBRID
+    if (v == 0 && g_joy.on && mister_on())
+        v = 1;
+#endif
     wr32(e0 + ENT_PEDALS, v == 0 ? 0 : v == 3 ? 3 : v < 4 ? 1 : 2);
     v = config_word(0x5f3a);
     wr32(e0 + ENT_PEDALS + 4, v == 0 ? 0 : v == 3 ? 3 : v < 4 ? 1 : 2);

@@ -5,6 +5,7 @@
    the options screen, the race menus' options and the pause menu (where the resolution
    cannot change). Done keeps it all, Cancel and Esc put the settings back. */
 #include "gfxopt.h"
+#include "mister.h"
 #include "config.h"
 #include "fe.h"
 #include "files.h"
@@ -131,6 +132,15 @@ int fe_graphics_options(int where)
     while (!done) {
         int mx, my, over = -1;
 
+#ifdef MISTER_HYBRID
+        /* (the MiSTer's: the races' resolution is the OSD's; this row shows it) */
+        if (mister_on() && config_word(CFG_RESOLUTION) != (mister_resolution() == 2 ? 0 : 1)) {
+            config_set_word(CFG_RESOLUTION, mister_resolution() == 2 ? 0 : 1);
+            if (config_word(CFG_RESOLUTION) == 1 && config_word(CFG_QUALITY) > 1)
+                config_set_word(CFG_QUALITY, 1);
+            redraw = 1;
+        }
+#endif
         /* the mouse picks a row by its height (the resolution's not in the pause menu) */
         mouse_read(&mx, &my);
         if (my <= 0x8c && where != GFX_PAUSE)

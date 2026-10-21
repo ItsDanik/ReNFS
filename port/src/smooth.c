@@ -1,5 +1,6 @@
 /* The race's motion smoothed between its steps (the port's own; smooth.h). */
 #include "smooth.h"
+#include "mister.h"
 #include "car.h"
 #include "cardraw.h"
 #include "files.h"
@@ -76,6 +77,12 @@ void smooth_keys(void)
     static int held;
     int down = key_down(0x57);
 
+#ifdef MISTER_HYBRID
+    if (mister_smooth() >= 0 && !getenv("RENFS_SMOOTH")) {
+        g_smooth = mister_smooth();    /* (the MiSTer's: the OSD's Smooth Motion, not F11) */
+        return;
+    }
+#endif
     if (down && !held) {
         g_smooth = !g_smooth;
         smooth_save();

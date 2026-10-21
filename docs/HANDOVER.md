@@ -430,6 +430,31 @@ equal at every snapshot): Danik's real Windows is the open check.
 **Progress page for Danik**: https://claude.ai/artifact/VZdxTpYC3oLXYeBVJpoDoM (every step,
 its percent done and weight). Update its steps file after each finished step.
 
+## The MiSTer (branch `mister`, started 2026-10-21)
+
+The core is `~/MiSTer-ReNFS` (the framework `hybrid/` and this repository as `renfs/`,
+branch `mister`). Danik's answers to the interview: `~/MiSTer-ReNFS/CLAUDE.md`, "Decisions
+from the interview". **The real MiSTer is shared with other agents: ask Danik before every
+use of it.**
+
+Done on the branch: `MISTER_HYBRID` builds (`./build.sh host` against fakecore, `./build.sh
+mister` for the ARM); `mister.c` (the core, the CD's files looked for at the start against
+`mister_files.c`, the pad as the original's joystick, Menu OK/Back, Start = Esc, R3 nitro,
+the OSD's resolution, smooth motion, rumble and the Cheats page, the race held while the
+OSD is open); names typed with the d-pad (`menu.c`); no calibration screen (a fixed one);
+the steering and pedals given as a joystick's whenever the core is there. `RENFS_FILELOG`
+lists every path the game asks for; `tools/mister_files.py NFSSE --check <log>` found none
+outside the list. The ARM build plays the CD's replays equal under qemu.
+
+The framework's wheel forces (`MH_Force*`, `hybrid/hps/mister_triggers.c`, branch
+`wheel-force` of the submodule, not in Hybrid_MiSTer yet: ask Danik) and
+`hybrid/tools/ff_wheel.c`, a fake force-feedback wheel through uinput that prints what it
+is given.
+
+Open: races at 320x240 (the OSD line exists, it races at 320x200 meanwhile); the first
+test on the MiSTer (frame times at 320x200 and 640x480, with and without smooth motion;
+then the defaults); screenshots; ItsDanik/ReNFS_MiSTer once it works and Danik tried it.
+
 ## Waiting for Danik
 
 - Nothing open. (Decided 2026-10-20: 640x480 races for the PC, then a 60 fps mode, then

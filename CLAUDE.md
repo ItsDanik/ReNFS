@@ -218,7 +218,7 @@ A pad drives on the Keyboard kinds too (all or nothing; the shoulders shift, Sta
 Force feedback (NOTES §4.26, `ff.c`/`ffdev.c`): the original's I-Force commands (packets `0x4c258`; kick
 `0x4ba10`, shakes, rumble, steady push), the game's side `0x4d670..0x4dcb6` (walls `0x4d878`, objects `0x4d730`,
 cars `0x4d7a4`, gears `0x4d8c0`, the road `0x4d9a8`, steady `0x4d928`, crash `0x4dc40`); played on SDL haptics or
-a pad's rumble; equal, `tools/ff_emu.py`. The MiSTer's SDL has haptics off: rumble only there for now.
+a pad's rumble; equal, `tools/ff_emu.py`. On the MiSTer a wheel's forces go through the framework's `MH_Force*` (`mister.c`), a pad rumbles.
 Smooth motion (NOTES §4.25, the port's own, `smooth.c`): the steps stay the original's 33.3 a second;
 each retrace's frame is drawn with the cars, camera and dials between the last two steps, then put back
 (F11, `renfs.cfg`); stepping faster (`0x12dd0c`) would make the game faster, not smoother.

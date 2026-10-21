@@ -19,6 +19,44 @@ void mister_retrace_wait(void);
    0 when the CD's files are not all there, after the core's message saying which and
    where (it stays until the player leaves the core) */
 int mister_start(void);
+/* the core's joystick 1 as the original's joystick (joy_device): the stick, the brake,
+   the throttle (the triggers, or A and B all the way), its buttons 1 handbrake, 2 map,
+   4 camera, 8 horn and the port's 16 gear up, 32 gear down */
+int mister_joy(int count[4], int *buttons);
+void *mister_pad_sdl(void);            /* its SDL joystick (the rumble's) */
+/* in the menus: Menu OK as Enter, Menu Back as Esc (0 for neither) */
+int mister_menu_key(void);
+int mister_pause_held(void);           /* Start: Esc */
+int mister_nitro_held(void);           /* R3: NITRO's keys */
+/* while a race is driven the pad's Menu OK and Back are no keys (A accelerates) */
+void mister_racing(int on);
+int mister_is_racing(void);
+
+/* the core's OSD options (CONF_STR in core/ReNFS.sv, status bits 24..): the races'
+   resolution, 0 320x200, 1 320x240, 2 640x480 (0 without the core); */
+int mister_resolution(void);
+/* Smooth Motion on (1) or off; -1 without the core */
+int mister_smooth(void);
+/* Rumble: the force feedback's strength, 100 On, 160 Strong, 0 Off; -1 without the core */
+int mister_rumble_strength(void);
+/* the Cheats page: bit 0 mirrored tracks (SKCART), 1 rally tracks (EARALLYE), 2 Lost
+   Vegas (CASINOVILLE), 3 the Warrior (CONCEPTCAR), 4 all unlocked (ROCKYROAD), 5 TURBO,
+   6 NITRO, 7 EXPLODE, 8 No Mercy (End held) */
+int mister_cheats(void);
+enum { MC_MIRROR = 1, MC_RALLY = 2, MC_VEGAS = 4, MC_WARRIOR = 8, MC_UNLOCK = 0x10,
+       MC_TURBO = 0x20, MC_NITRO = 0x40, MC_EXPLODE = 0x80, MC_NO_MERCY = 0x100 };
+
+/* a wheel's forces (hybrid/hps MH_Force*; ffdev.c): levels -255 (left) .. 255 (right),
+   ms 0 no end (kept by mister_force_keep() once a frame) */
+int mister_force_available(void);
+void mister_force_constant(int slot, int level, int ms);
+void mister_force_sine(int slot, int magnitude, int period_ms);
+void mister_force_stop(int slot);
+void mister_force_keep(void);
+
+/* the core's OSD menu is open (a race is held meanwhile) */
+int mister_osd_open(void);
+
 /* a message on the core's picture that stays until the player leaves the core */
 void mister_fatal(const char *text);
 /* what the process ends with: the launcher's contract */

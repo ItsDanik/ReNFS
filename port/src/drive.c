@@ -214,6 +214,12 @@ unsigned drive_keyboard(int mirrored)
             steer = (unsigned)(mirrored ? 0x20 - g_joy.steer : g_joy.steer + 0x20);
     } else if (sk == 1) {
         int v = g_joy.steer;
+#ifdef MISTER_HYBRID
+        /* (the MiSTer's: the keyboard's arrows full lock, as the stick all the way) */
+        int left = key_down(g_drive.keys[0]), right = key_down(g_drive.keys[1]);
+        if (left != right)
+            v = g_joy.steer = left ? -0x20 : 0x1f;
+#endif
         if (mirrored && (v == 0x1f || v == -0x20))
             v = ++g_joy.steer;
         steer = (unsigned)(mirrored ? 0x20 - v : v + 0x20);
@@ -228,8 +234,15 @@ unsigned drive_keyboard(int mirrored)
             pedal = 0x3c;
         if (pedal == 0x1e && g_joy.on)
             pedal = (unsigned)(g_joy.pedal + 0x1e);
-    } else if (pk == 1)
+    } else if (pk == 1) {
         pedal = (unsigned)(g_joy.pedal + 0x1e);
+#ifdef MISTER_HYBRID
+        if (key_down(g_drive.keys[2]))     /* (the MiSTer's: the keys as the pedals all the way) */
+            pedal = 5;
+        if (key_down(g_drive.keys[3]))
+            pedal = 0x3c;
+#endif
+    }
     else if (pk == 3) {
         if (held & 1)
             pedal = 5;

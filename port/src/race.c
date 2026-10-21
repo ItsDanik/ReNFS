@@ -1,5 +1,6 @@
 /* A race (NOTES §4.3, §4.7): the loading of race_main 0x6356c and the frame of
    race_draw_frame 0x5bc40, as far as the port has them. */
+#include "mister.h"
 #include "race.h"
 #include "ff.h"
 #include "ffdev.h"
@@ -278,6 +279,9 @@ static void race_step(race_car *player, race_camera *cam, int done)
     }
     /* NITRO's keys: N with a shift or B */
     g_drive.nitro_keys = key_down(0x31) && (key_down(0x2a) || key_down(0x36) || key_down(0x30));
+#ifdef MISTER_HYBRID
+    g_drive.nitro_keys |= mister_nitro_held();     /* (the MiSTer's: R3) */
+#endif
     g_drive.clock = (int)clock_ticks();
     /* race_step 0x6348c: the calls due and the pause's keys, then the race's other keys */
     race_pause_step(cam, done);
@@ -371,6 +375,12 @@ int race_run(void)
     /* (race_run 0x3724f) at 640x480 when the graphics screen's first row says so (+0x7f
        0; 0x12c308, 0x143e2c by 0x5b984), else 320x200; RENFS_RES=320 or 640 for a test */
     g_view_res = config_word(0x7f) == 0;
+#ifdef MISTER_HYBRID
+    if (mister_on()) {         /* (the MiSTer's: the OSD's Resolution, the settings follow) */
+        g_view_res = mister_resolution() == 2;
+        config_set_word(0x7f, !g_view_res);
+    }
+#endif
     if (getenv("RENFS_RES"))
         g_view_res = atoi(getenv("RENFS_RES")) == 640;
     /* (0x5e4b8, 0x5e4c4) a race, or a replay (CONFIG.DAT +0xaf: 1 the whole of
@@ -657,6 +667,9 @@ int race_run(void)
     replay_race_begins();
     g_replay.cam = &cam;
     smooth_reset();
+#ifdef MISTER_HYBRID
+    mister_racing(1);
+#endif
 
     while (!g_quit && !g_pause.quit && !g_timing.result && !g_replay.end) {
         const int *m;
@@ -831,6 +844,9 @@ int race_run(void)
     }
     ff_stop();                 /* (0x63b61) */
     ff_forces(0);
+#ifdef MISTER_HYBRID
+    mister_racing(0);
+#endif
 
     mouse_show(0);             /* (the replay's pointer: the films and menus after show
                                   their own) */

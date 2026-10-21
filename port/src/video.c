@@ -360,6 +360,19 @@ static void poll(void)
                 scan_put(1);
                 key_put(0x1b);
             }
+#ifdef MISTER_HYBRID
+        } else if (e.type == SDL_JOYBUTTONDOWN && g_mister && e.jbutton.which == 0) {
+            /* the core's pad: Start Esc; outside a race Menu OK Enter and Menu Back Esc,
+               for the screens that wait for a key (the title, the movies, a name) */
+            int b = e.jbutton.button;
+            if (b == 7 || (!mister_is_racing() && (b == 9 || b == 29))) {
+                scan_put(1);
+                key_put(0x1b);
+            } else if (!mister_is_racing() && (b == 8 || b == 28)) {
+                scan_put(0x1c);
+                key_put(0x0d);
+            }
+#endif
         } else if (e.type == SDL_KEYDOWN && (e.key.keysym.mod & KMOD_ALT)
                    && (e.key.keysym.sym == SDLK_RETURN || e.key.keysym.sym == SDLK_KP_ENTER)) {
             /* (the port's) Alt+Enter: the whole screen or a window, kept in renfs.cfg; the
@@ -630,6 +643,10 @@ int key_down(int scan)
         return 0;
     if (g_script_held[scan] || (scan == 1 && g_pad_esc))
         return 1;
+#ifdef MISTER_HYBRID
+    if (scan == 1 && g_mister && mister_pause_held())
+        return 1;
+#endif
     for (int i = 0; i < 2; i++)
         if (g_pc_keys[scan][i] && k[g_pc_keys[scan][i]])
             return 1;
@@ -682,6 +699,10 @@ static int joy_count(int v)                /* -32768..32767 as the game port's 0
 
 void *joy_sdl(void)
 {
+#ifdef MISTER_HYBRID
+    if (g_mister)
+        return mister_pad_sdl();
+#endif
     if (getenv("RENFS_JOY") || g_shot)
         return 0;
     if (g_pad && SDL_GameControllerGetAttached(g_pad))
@@ -696,6 +717,10 @@ int joy_device(int count[4], int *buttons)
 
     count[0] = count[1] = count[2] = count[3] = 0;     /* (an axis it lacks) */
     *buttons = 0;
+#ifdef MISTER_HYBRID
+    if (g_mister && !test)
+        return mister_joy(count, buttons);
+#endif
     if (test || g_shot) {
         int j = 0, jc[4] = { -1, -1, -1, -1 };
         if (!test || !atoi(test))

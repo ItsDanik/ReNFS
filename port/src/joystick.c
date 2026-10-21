@@ -1,5 +1,6 @@
 /* The joystick: found at start-up, calibrated, read in the menus and in a race. */
 #include "joystick.h"
+#include "mister.h"
 #include "fe.h"
 #include "files.h"
 #include "fsh.h"
@@ -52,6 +53,8 @@ static void cal_save(void)
 /* cfg_load_joystick 0x4d4a0: the calibration kept, if the stick let go is near its
    middle (75 counts) and inside the menus' thresholds; else the screen. A file of
    another size is removed */
+static void cal_finish(void);
+
 static void cal_load(void)
 {
     char path[1024];
@@ -78,6 +81,19 @@ static void cal_load(void)
         } else
             remove(path);
     }
+#ifdef MISTER_HYBRID
+    if (mister_on()) {
+        /* (the MiSTer's: the core's sticks and triggers are all alike, their whole range:
+           no calibration screen; Options, Controls still has it) */
+        int *k = g_joy.cal;
+        k[JC_X_MIN] = k[JC_Y_MIN] = k[JC_T_MIN] = k[JC_B_MIN] = 0;
+        k[JC_X_MID] = k[JC_Y_MID] = k[JC_T_MID] = 256;
+        k[JC_X_MAX] = k[JC_Y_MAX] = k[JC_T_MAX] = k[JC_B_MAX] = 511;
+        cal_finish();
+        g_joy.on = 1;
+        return;
+    }
+#endif
     fe_joystick_calibrate(0, 0);
     /* (0x4d670: the force feedback wheel, with joyopt.cfg's flag: not here) */
 }
@@ -159,10 +175,19 @@ int joy_menu_key(void)
 
     if (!g_joy.on || !joy_poll())
         return 0;
-    if (g_joy.buttons & 1)
-        return 0x20;
-    if (g_joy.buttons & 2)
-        return 0x0d;
+#ifdef MISTER_HYBRID
+    if (mister_on()) {                     /* (the MiSTer menu's OK and Back) */
+        int k = mister_menu_key();
+        if (k)
+            return k;
+    } else
+#endif
+    {
+        if (g_joy.buttons & 1)
+            return 0x20;
+        if (g_joy.buttons & 2)
+            return 0x0d;
+    }
     dir = g_joy.y < c[JC_Y_LO] ? 0x4800 : g_joy.y > c[JC_Y_HI] ? 0x5000
         : g_joy.x < c[JC_X_LO] ? 0x4b00 : g_joy.x > c[JC_X_HI] ? 0x4d00 : 0;
     return dir;

@@ -1,5 +1,6 @@
 /* What every menu screen shares. */
 #include "menu.h"
+#include "mister.h"
 #include "files.h"
 #include "fsh.h"
 #include "joystick.h"
@@ -415,6 +416,49 @@ int fe_ask_exit(void)
     return fe_yes_no_dialog(q);
 }
 
+#ifdef MISTER_HYBRID
+/* (the MiSTer's) a name typed with the pad (`j` the pad as the menus read it): up and down
+   the letter at the end through the letters, right one more letter, left one less; held,
+   again after 0.4 s and then every 0.1 s. Returns a key for the field: 8 one less, Esc,
+   a letter to add, or 0x4800 for the last one changed in buf (drawn again); 0 none */
+static int pad_letters(int j, char *buf, int len, int maxlen, int names)
+{
+    static const char name_set[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 -.";
+    static const char file_set[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_";
+    static int last;
+    static unsigned long next;
+    const char *set = names ? name_set : file_set;
+    unsigned long now = clock_ticks();
+    const char *at;
+
+    if (j == 0x1b)
+        return j;
+    if (j != 0x4800 && j != 0x5000 && j != 0x4b00 && j != 0x4d00) {
+        last = 0;
+        return 0;
+    }
+    if (j == last && now < next)
+        return 0;
+    next = now + (j == last ? 10 : 40);
+    last = j;
+    if (j == 0x4b00)
+        return len > 0 ? 8 : 0;
+    if (j == 0x4d00)
+        return len < maxlen ? (len > 0 ? buf[len - 1] : 'A') : 0;
+    if (len == 0)
+        return 'A';
+    at = strchr(set, buf[len - 1]);
+    if (!at || !buf[len - 1])
+        at = set;
+    else if (j == 0x4800)
+        at = at[1] ? at + 1 : set;
+    else
+        at = at > set ? at - 1 : set + strlen(set) - 1;
+    buf[len - 1] = *at;
+    return 0x4800;
+}
+#endif
+
 /* 0x701cc: a line typed in, centred on cx at y, in a window of maxlen / 2 * 30 + 5 each
    side by 35 lines that holds what was there. For a name (names = 1) space . * + [ ] :
    ; " < > , ? are let in; for a file name none of them, and letters become capitals;
@@ -469,6 +513,10 @@ int fe_text_field(char *text, int maxlen, int cx, int y, int names)
         int j = joy_menu_key(), k = key_get();
         if (!k && (j == 0x20 || j == 0x0d))
             k = 0x0d;                      /* (a joystick's button, 0x70426) */
+#ifdef MISTER_HYBRID
+        if (!k && mister_on())
+            k = pad_letters(j, buf, len, maxlen, names);
+#endif
         if (k == 0x0d) {
             int i = 0;
             while (i < len && buf[i] == ' ')

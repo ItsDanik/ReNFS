@@ -3,6 +3,7 @@
    Race, Options, Chat (network games only) and Cancel. The network game's parts are left
    out (Danik, 2026-10-18). */
 #include "mainmenu.h"
+#include "mister.h"
 #include "config.h"
 #include "fe.h"
 #include "files.h"
@@ -409,6 +410,90 @@ static int codes(void)
     return redraw;
 }
 
+#ifdef MISTER_HYBRID
+/* (the MiSTer's) the OSD's Cheats page: while a line is on, its code is as typed (not in
+   a tournament, as the codes are not taken there); turned on, what typing it chooses is
+   chosen (the mirrored or rally track, the Warrior), turned off it is taken back. Unlock
+   All (ROCKYROAD) is kept in the records once done, as typed twice */
+static int codes_osd(void)
+{
+    static int had;
+    int on = mister_cheats(), type3 = cw(CFG_RACE_TYPE) == 3, redraw = 0;
+    int up = on & ~had, down = had & ~on;
+
+    had = on;
+    if (on & MC_MIRROR)
+        g_mirror_ok = 1;
+    if (on & MC_RALLY)
+        g_rally_ok = 1;
+    if ((up & MC_MIRROR) && !type3) {
+        g_mirror = 1;
+        g_rally = 0;
+        redraw = 1;
+    }
+    if ((up & MC_RALLY) && !type3) {
+        g_rally = 1;
+        g_mirror = 0;
+        redraw = 1;
+    }
+    if (down & MC_MIRROR) {
+        g_mirror_ok = 0;
+        redraw |= g_mirror;
+        g_mirror = 0;
+    }
+    if (down & MC_RALLY) {
+        g_rally_ok = 0;
+        redraw |= g_rally;
+        g_rally = 0;
+    }
+    if ((on & MC_VEGAS) && !type3)
+        g_vegas_typed = g_vegas_ok = 1;
+    if (down & MC_VEGAS) {
+        g_vegas_typed = 0;
+        g_vegas_ok = cw(CFG_UNLOCKED) != 0;
+        if (!g_vegas_ok && cw(CFG_TRACK) == 8) {
+            cset(CFG_TRACK, 0);
+            redraw = 1;
+        }
+    }
+    if ((on & MC_WARRIOR) && !type3)
+        g_warrior_ok = 1;
+    if ((up & MC_WARRIOR) && !type3) {
+        cset(CFG_CAR, 11);
+        fe_car_setup();
+        redraw = 1;
+    }
+    if (down & MC_WARRIOR) {
+        g_warrior_ok = 0;
+        if (cw(CFG_CAR) == 11) {
+            cset(CFG_CAR, 0);
+            fe_car_setup();
+            redraw = 1;
+        }
+    }
+    if ((up & MC_UNLOCK) && !type3) {
+        cset(CFG_UNLOCKED, 2);
+        g_vegas_ok = g_warrior_ok = g_mirror_ok = g_rally_ok = 1;
+        redraw = 1;
+    }
+    if (!type3) {
+        if (on & MC_TURBO)
+            g_cheat_flags |= 0x08;
+        if (on & MC_NITRO)
+            g_nitro = 1;
+        if (on & MC_EXPLODE)
+            g_explode = 1;
+    }
+    if (down & MC_TURBO)
+        g_cheat_flags &= ~0x08;
+    if (down & MC_NITRO)
+        g_nitro = 0;
+    if (down & MC_EXPLODE)
+        g_explode = 0;
+    return redraw;
+}
+#endif
+
 static int in_rect(int x0, int x1, int y0, int y1)
 {
     int x, y;
@@ -568,7 +653,13 @@ int fe_main_menu(void)
         }
         if (codes())
             redraw = 1;
+#ifdef MISTER_HYBRID
+        if (codes_osd())
+            redraw = 1;
+        if (cw(CFG_RACE_TYPE) == 1 && (key_down(0x4f) || (mister_cheats() & MC_NO_MERCY))) {
+#else
         if (cw(CFG_RACE_TYPE) == 1 && key_down(0x4f)) {   /* End held: "No mercy" */
+#endif
             if (!g_no_mercy) {
                 g_no_mercy = 1;
                 g_cheat_flags |= 0x04;

@@ -1,5 +1,6 @@
 /* The race held (NOTES §4.20). */
 #include "pause.h"
+#include "mister.h"
 #include "ff.h"
 #include "audioopt.h"
 #include "gfxopt.h"
@@ -56,6 +57,25 @@ static void hold(race_camera *cam)
     g_pause.held_ticks += clock_ticks() - from;
     ff_forces(1);              /* (0x63238) */
 }
+
+#ifdef MISTER_HYBRID
+/* (the MiSTer's) the OSD open: the race held as P holds it, until the OSD is closed */
+static void hold_osd(race_camera *cam)
+{
+    unsigned long from = clock_ticks();
+
+    hud_paused();
+    rsnd_quiet();
+    ff_forces(0);
+    while (!g_quit && mister_osd_open())
+        video_retrace();
+    hud_redraw_due();
+    camera_set_mode(cam, cam->mode);
+    rsnd_music_back();
+    g_pause.held_ticks += clock_ticks() - from;
+    ff_forces(1);
+}
+#endif
 
 /* race_pause_menu 0x56474: the race's pause menu, at 640x480 */
 
@@ -365,6 +385,10 @@ void race_pause_step(race_camera *cam, int done)
             else
                 hold(cam);
         }
+#ifdef MISTER_HYBRID
+    if (mister_osd_open() && g_drive.state != 3)
+        hold_osd(cam);
+#endif
     /* 0x63304: Esc after the first 120 steps' counts (60 steps), once in 90 steps; P the
        same once in 60, not while the police's ticket is shown (no network races here:
        there Esc with a Shift ends the race) */
