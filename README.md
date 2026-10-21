@@ -12,6 +12,11 @@ a pad rumbles and a force-feedback wheel gets the original's effects.
 
 Not in it: the network and modem race (greyed out in the menu).
 
+| | |
+|---|---|
+| ![Alpine at evening, a race at 640x480](docs/screenshots/race_alpine_evening_640x480.png) | ![The desert from behind the car, 320x200](docs/screenshots/race_desert_320x200.png) |
+| ![Control Central, the main menu](docs/screenshots/menu_control_central_640x480.png) | ![The cars' showcase](docs/screenshots/menu_showcase_640x480.png) |
+
 **Beta, version 0.6.0b.** Please report problems on the
 [issues page](https://github.com/ItsDanik/ReNFS/issues).
 
