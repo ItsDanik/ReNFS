@@ -96,6 +96,8 @@ static void strip(const unsigned char *shape, int off, int x, int top)
         if (top + i < y0 || top + i >= y1)
             break;                     /* (a horizon far off the screen: the original
                                           runs past its table of rows) */
+        if (!RASTER_SHOWN(top + i))
+            continue;
         dst = raster_row(top + i) + x;
         long at = (long)(g_sky_rows[skip + i] + row) * w + off;
         for (j = 0; j < k; j++)

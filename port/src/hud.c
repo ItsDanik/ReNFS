@@ -24,6 +24,7 @@
 #include "trackfam.h"
 #include "video.h"
 #include "view.h"
+#include "tall.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -687,6 +688,9 @@ static void bamf_copy(const hud_picture *from, const unsigned char *list)
                 else
                     for (j = 0; j < k; j++)
                         dst[j] = src[(unsigned)j * rate >> 16];
+                /* (the port's 320x240: where the view went on the screen) */
+                if (g_view_tall && from == &g_hud_view && g_win.pix == g_fb)
+                    tall_copied((long)dr * g_win.w + dc, (long)sr * from->w + sc, k, rate);
                 len -= k;
                 sr++, dr++;
                 sc = dc = 0;

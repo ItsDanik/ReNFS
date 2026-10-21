@@ -847,6 +847,8 @@ void poly_shade_rows(const int *left, const int *right, int y, int n, int colour
 
     (void)colour;
     for (; n > 0; n--, y++, left++, right++) {
+        if (!RASTER_SHOWN(y))
+            continue;
         p = raster_row(y);
         for (x = *left; x <= *right; x++)
             p[x] = g_shade[p[x]];

@@ -21,7 +21,7 @@ from snap_emu import Snap, game, flat
 from unicorn import UC_HOOK_CODE
 from unicorn.x86_const import UC_X86_REG_ESP, UC_X86_REG_EIP, UC_X86_REG_EAX
 
-SOURCES = ["ff.c", "ffdev.c", "drive.c", "cardraw.c", "skid.c", "model.c", "polyfill.c", "camera.c", "car.c", "dash.c", "hud.c",
+SOURCES = ["ff.c", "ffdev.c", "drive.c", "cardraw.c", "skid.c", "model.c", "polyfill.c", "camera.c", "car.c", "dash.c", "hud.c", "tall.c",
            "config.c", "view.c", "sky.c", "roaddraw.c", "trackinfo.c", "road.c", "poly.c",
            "raster.c", "track.c", "files.c", "exe.c", "trackfam.c", "racepal.c", "font.c",
            "video.c", "fsh.c", "unpack.c", "timing.c", "smoke.c", "opponent.c", "sndlib.c",

@@ -15,6 +15,7 @@ typedef struct {
     int dx, dy;                /* +8, +0xc: the lens's centre moved (dy: the car's horizon) */
     int w, h;                  /* +0x10, +0x14: what the lens covers */
     int x, y, cw, ch;          /* +0x18 ..: the part of the screen painted */
+    int tall;                  /* (the port's) one of the 320x240 races' (tall.h) */
 } view_window;
 
 /* a view of the camera (0xe8de8 the road ahead, 0xe8e28 the mirror) */
@@ -54,6 +55,14 @@ typedef struct {
 
 extern view_window g_windows[2][VIEW_WINDOWS];  /* 0xe85c0: 320x200, 640x480 */
 extern int g_view_res;                          /* 0x143e2c: 0 320x200, 1 640x480 */
+/* (the port's) the 640x480 race shown with 240 or 200 of its rows (the MiSTer's 640x240,
+   640x200; video_rows), the 320x200 one with 240 (320x240, tall.h), else 0 */
+extern int g_race_rows;
+/* (the port's) 320x240: the views ahead and outside drawn through tall windows (tall.h),
+   set before view_init */
+extern int g_view_tall;
+/* a tall window's 320x200 one (any other itself) */
+const view_window *view_window_lo(const view_window *w);
 /* a number by the race's resolution: lo at 320x200, hi at 640x480 (0x12c308) */
 #define H(lo, hi) (g_view_res ? (hi) : (lo))
 extern view_rec g_view_ahead, g_view_mirror;    /* 0xe8de8, 0xe8e28 */

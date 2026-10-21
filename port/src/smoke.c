@@ -140,6 +140,8 @@ static void stretch_box(int w, int h, const shape *sh, int x, int y, int solid)
         const unsigned char *src = sh->pixels + (v >> 16) * sh->w;
         unsigned char *dst = raster_row(y) + x;
 
+        if (!RASTER_SHOWN(y))
+            continue;
         if (solid) {
             for (i = 0; i < w; i++)
                 if (src[cols[i]] != 0xff)

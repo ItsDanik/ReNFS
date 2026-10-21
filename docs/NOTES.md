@@ -2133,7 +2133,11 @@ Its decimals (`0x41b68`): spaces, '-', the whole part by atoi, the fraction's di
 counted, its zeros skipped and four digits kept after them, (atoi << 16) / 10^digits
 unsigned. A line starting `#`, LF or CR is skipped; at the end of the file the last line
 is read again. **Ported (`port/src/trackinfo.c`), equal on the snapshots; the file path
-equal to `tools/trackinfo.py` on all 16 tracks.**
+equal to `tools/trackinfo.py` on all 16 tracks.** `0x143e2c` is the race's resolution by
+then: race_main `0x6356c` calls `0x5b984([0x12c308])` at `0x63664`, just before
+`load_track_info` at `0x6366e`, so at 640x480 the ring keeps the file's numbers. (Until
+2026-10-21 the port shrank them at 640x480 too: the circuits' horizon there sat low and
+flat; the snapshots, all 320x200, could not show it.)
 **The family switch `0x12c340`**: 1 if `0x12dd2c` or `0x12dd28`, else `0x12dd30[track]`
 (main sets all nine to 1; the track screen `0x77254` toggles one between 1 and another
 value). 1: `simdata\ntrackfm\<track>_M01.fam` with `0x12dd28`, `_R01` with `0x12dd2c` (not
@@ -4206,6 +4210,35 @@ its own linked in.
   the rumble works (Danik felt `SDL_JoystickRumble` on a DualSense through it). A wheel's
   forces need that SDL built with haptics on; `ffdev.c` then finds it unchanged. Untried:
   no wheel here.
+
+### 4.27 The MiSTer's race sizes (2026-10-21; the port's own, `video.c`, `tall.c`)
+
+Danik's five on the core's Resolution line: 320x200, 320x240, 640x200, 640x240, 640x480
+(`mister_resolution()`; `RENFS_RES=320x240`, `640x240`, `640x200` try them on a PC).
+- **640x240 and 640x200**: the 640x480 race as it is, shown with 240 or 200 of its rows,
+  each the row at the middle of those it stands for (`video_rows`: of 480, every second for
+  240, one in 2.4 for 200). The 3D painters skip the rows not shown (`raster_rows`, a byte a
+  row, consulted by the quads, the far road's triangles, the fills, the shaded rows, the sky
+  and the smoke; only for the main view, never with detail 2 whose lists double the view's
+  rows): those rows of the picture are equal to the full 640x480 one's, checked on Replay 1.
+  The PC's drawing a picture: 640x480 0.75 ms, 640x240 0.47, 640x200 0.45, 320x200 0.27.
+  At 640x200 the smallest digits lose a row (the status bar's clock); 640x240 reads well.
+- **320x240**: the 320x200 race's screen stretched to 240 rows (one row in five twice: the
+  dashboard and HUD are the 320x200 artwork) and the 3D view drawn at 240 rows of its own.
+  The cockpit's dashboard frames the windscreen, so a taller view with the artwork moved
+  apart (OpenScreamer's way) would break the roof and pillars; this keeps every picture of
+  the game where it is. The views ahead and outside use windows 6/5 as tall (`view.c`
+  `g_windows_tall`: y, the height, the horizon's dy, the painted height, and the squash
+  6/5; not the mirror's, nor detail 2's whose rows the lists double; two of the seven
+  320x200 layout records are empty, all 0). The 3D is painted into its own 320x240 picture
+  (`tall.c`); a 320x200 copy of it (each row from the 240's row at its middle) goes into the
+  game's view picture, so that everything drawn into it afterwards (the gauges' boxes, the
+  ticket, the markers) is as at 320x200. The lists' copy to the screen (`bamf_copy`) notes
+  for each screen pixel which view pixel it took; when a row is shown, a pixel that still has
+  that colour takes the 240-row picture's pixel instead, from the row as far from the shown
+  row as the list moved the view (6/5 of it: the cockpit's view sits 17 rows down). Without
+  a seam at the windscreen's edges; the pause menu (640x480) and the race after it right.
+  0.2 ms more a picture than 320x200 on the PC.
 
 ## 5. The original in DOSBox (2026-10-19)
 

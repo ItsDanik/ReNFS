@@ -15,6 +15,14 @@ void video_done(void);
 /* initgraphics: 640x480 (the front end), 320x200 (a race in low detail), 320x240 (the
    movies, VGA mode X) */
 void video_mode(int w, int h);
+/* (the port's) the picture shown with `rows` rows (the MiSTer's 640x240 and 640x200 races
+   of a 640x480 picture, each at the middle of those it stands for; its 320x240 of a
+   320x200 one, one row in five twice); 0 its own. A video_mode() sets its own again */
+void video_rows(int rows);
+const unsigned char *video_rows_shown(void);   /* a byte a row, 1 shown; 0 all are */
+/* with more rows shown than the picture has: row y's pixels from f (the game's row `row`
+   it stands for; tall.c), 0 the picture's own */
+void video_row_source(const unsigned char *(*f)(int y, int row));
 /* setpalette 0x84080: colours first.. from an 8-bit palette; the card keeps 6 bits */
 void video_palette(const unsigned char *pal, int first, int count);
 /* the palette read back from the card (0x98aec): its 6 bits widened, v << 2 | v >> 4 */

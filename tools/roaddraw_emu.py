@@ -20,7 +20,7 @@ from poly_emu import Vec3
 # (as tools/cars_emu.py's: video.c and the cars' files reach the rest)
 SOURCES = ["ff.c", "ffdev.c", "roaddraw.c", "sky.c", "trackinfo.c", "road.c", "poly.c", "raster.c", "track.c", "files.c", "exe.c",
            "trackfam.c", "model.c", "racepal.c", "font.c", "video.c", "fsh.c", "unpack.c", "view.c", "config.c", "polyfill.c",
-           "cardraw.c", "skid.c", "camera.c", "car.c", "dash.c", "hud.c", "crash.c", "smoke.c", "drive.c", "timing.c", "opponent.c",
+           "cardraw.c", "skid.c", "camera.c", "car.c", "dash.c", "hud.c", "tall.c", "crash.c", "smoke.c", "drive.c", "timing.c", "opponent.c",
            "sndlib.c", "racesnd.c", "audio.c", "sound.c", "eacs.c"]
 
 

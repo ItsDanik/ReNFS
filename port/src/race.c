@@ -35,6 +35,7 @@
 #include "skid.h"
 #include "sky.h"
 #include "smooth.h"
+#include "tall.h"
 #include "standings.h"
 #include "timing.h"
 #include "track.h"
@@ -420,14 +421,22 @@ int race_run(void)
     /* (race_run 0x3724f) at 640x480 when the graphics screen's first row says so (+0x7f
        0; 0x12c308, 0x143e2c by 0x5b984), else 320x200; RENFS_RES=320 or 640 for a test */
     g_view_res = config_word(0x7f) == 0;
+    g_race_rows = 0;
 #ifdef MISTER_HYBRID
     if (mister_on()) {         /* (the MiSTer's: the OSD's Resolution, the settings follow) */
-        g_view_res = mister_resolution() == MR_640x480;
+        const int r = mister_resolution();
+        g_view_res = r == MR_640x480 || r == MR_640x240 || r == MR_640x200;
+        g_race_rows = r == MR_640x240 || r == MR_320x240 ? 240 : r == MR_640x200 ? 200 : 0;
         config_set_word(0x7f, !g_view_res);
     }
 #endif
-    if (getenv("RENFS_RES"))
-        g_view_res = atoi(getenv("RENFS_RES")) == 640;
+    if (getenv("RENFS_RES")) {
+        const char *r = getenv("RENFS_RES");
+        g_view_res = atoi(r) == 640;
+        g_race_rows = strchr(r, 'x') ? atoi(strchr(r, 'x') + 1) : 0;
+        g_race_rows = g_race_rows == 240 || (g_race_rows == 200 && g_view_res) ? g_race_rows : 0;
+    }
+    g_view_tall = !g_view_res && g_race_rows == 240;
     /* (0x5e4b8, 0x5e4c4) a race, or a replay (CONFIG.DAT +0xaf: 1 the whole of
        REPLAY.RPL, 2 its highlights, 3 the attract mode's): the race record from the file
        (0x5c340), the rest of it read at the first step */
@@ -493,7 +502,7 @@ int race_run(void)
        track's time of day chosen on its screen (0x12dd30) */
     family = g_road_mirror || g_drive.rally ? 1 : rec_get(REC_TOD + 4 * g_drive.kind);
     fam_kind = g_road_mirror ? 2 : g_drive.rally && g_drive.kind != 3 ? 3 : 0;
-    if (!track_load(name) || !trackinfo_load(name, family, 0)
+    if (!track_load(name) || !trackinfo_load(name, family, g_view_res)
         || !trackfam_load(name, family, fam_kind)) {
         fprintf(stderr, "renfs: the track %s could not be loaded\n", name);
         return 0;
@@ -574,6 +583,11 @@ int race_run(void)
         return 0;
     /* (0x5ba1c: at 640x480 the menus' mode kept) */
     video_mode(H(320, 640), H(200, 480));
+    /* (the MiSTer's 640x240 and 640x200 of the 640x480 picture, its 320x240 of the 320x200
+       one with the view at 240 rows) */
+    video_rows(g_race_rows);
+    if (g_view_tall && !tall_on(1))
+        return 0;
     pal_apply_pieces();
     race_colours(marks, ncars, type);
     needle_colours(cars[0].number);     /* (0x8a390, in race_colours) */
@@ -842,13 +856,23 @@ int race_run(void)
             hud_outside_screen(cam.ahead->box);
         /* the view painted off the screen (0xf4578), then the dashboard puts it on the
            screen through its windows (0x31684), or from outside the HUD's lists (0x314e4) */
-        raster_window(g_hud_view.pix, g_hud_view.w, win.x, win.y, win.x + win.w, win.y + win.h);
+        tall_frame();
+        if (w->tall)               /* (the port's 320x240: the view at 240 rows) */
+            raster_window(tall_picture(), TALL_W, win.x, win.y, win.x + win.w, win.y + win.h);
+        else
+            raster_window(g_hud_view.pix, g_hud_view.w, win.x, win.y, win.x + win.w, win.y + win.h);
+        /* (the port's) with fewer rows shown, only those painted; not when the lists
+           double the view's rows */
+        if (g_hud.detail != 2)
+            raster_rows(video_rows_shown());
         sky_draw(cam.yaw, cam.roll, &cam.pos, m, w, &win, g_rkeys.plain_sky);
         g_car_ticket = g_opp.ticket_up || g_opp.warning_up;
         g_road_steps = g_drive.steps;
         g_cars_held = g_drive.state == 4;
         road_objects_start();
         road_draw(g_rkeys.drawn, cam.node, near, &win);
+        if (w->tall)
+            tall_view_done(w, view_window_lo(w), g_hud_view.pix);
         g_hud.steps = g_drive.steps;
         g_hud.ahead = g_timing.split;
         g_hud.splits = g_timing.split_shown;
@@ -944,6 +968,7 @@ int race_run(void)
     for (i = 0; i < ncars; i++)
         car_free(&cars[i]);
     hud_free();
+    tall_on(0);
     smoke_free();
     dash_free();
     trackfam_free();

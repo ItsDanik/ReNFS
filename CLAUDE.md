@@ -199,7 +199,11 @@ The controls screen `0x22bd0` (NOTES §4.2): +0x5f36.. kinds and keys (menu key 
 the key `0x733a0`; the race's scan codes `0x36a0c` (`0x36758` German → US, `key_scancode` `0x91d60`, table `0xf7b74`).
 `tools/fecompare.py`: a port menu picture against DOSBox's, by palette entry.
 Races at 640x480 (NOTES §4.24): the default (+0x7f 0, `0x12c308` 1), `H(lo, hi)` in the port; detail 3
-every other line (`0x12d9da` the clear); the start beeps `0x5257c` are an empty routine.
+every other line (`0x12d9da` the clear); the start beeps `0x5257c` are an empty routine; the circuits'
+sky ring unshrunk at 640x480 (`0x5b984` before `load_track_info`).
+The MiSTer's race sizes (NOTES §4.27): 640x240/640x200 the 640x480 race's rows shown (`video_rows`, the
+painters skip the others, `raster_rows`); 320x240 the 320x200 screen stretched with the 3D at 240 rows
+of its own (`tall.c`, tall windows in `view.c`, the lists' copy noted in `bamf_copy`).
 The watching bar (NOTES §4.22): another car watched or the player stopped, drawn `0x7ef14` (`hud.c`
 `watch_draw`), read `0x7f010` (`replay.c` `watch_step`): the cars 1..8, < >, the camera, the driver's name.
 Skid marks (NOTES §4.10's end, `skid.c`): 125 records `0x149574` written as the player's car is drawn
@@ -278,7 +282,7 @@ once; for `--shot` tests);
 `RENFS_THROW=s:x,y,z`: the car given a speed at race step s (to see a crash);
 `RENFS_PLACE=s:a,c,v`: the opponent put a m ahead and c m beside at v m/s at race step s;
 `RENFS_VIEW=n`: the race watched from camera n (outside: 2..5, 8..12);
-`RENFS_RES=320|640`: races at that size whatever the settings say;
+`RENFS_RES=320|640`: races at that size whatever the settings say (`320x240`, `640x240`, `640x200`: the MiSTer's sizes);
 `RENFS_FF=0..100`: the force feedback's strength (else `renfs.cfg` `forcefeedback`, 100); `RENFS_FFLOG=f`:
 every force-feedback command written with the race's step;
 `RENFS_SMOOTH=0|1`: the motion smoothed between steps or not (F11's setting, `renfs.cfg`, untouched);
@@ -301,7 +305,7 @@ queued), the pictures timed by the sound heard, as the original with sound on.
 and `movie.c` (the movies), `fe.c` (front end screens), `mainmenu.c` (Control Central), `options.c` (the options screen, the race menus' Game options), `menu.c` (what the menus share:
 keys, mouse, text styles, the yes/no dialog), `font.c` (FFN, letters blended pixel by
 pixel, `nearest_colour`, the inverse table), `sound.c` (the front end's sound bank and
-music, the race's music `0x63d88` and speech `0x722b4`), `audioopt.c` (the audio screen), `gfxopt.c` (the graphics screen `0x32d08`), `ctrlopt.c` (the controls screen `0x22bd0`: kinds, keys redefined, conflicts; the race's keys from them, `drive_keys_from_config` `0x36a0c`), `joystick.c` (the joystick: found, calibrated, `joystick.cfg` in the home folder, read in races and menus), `smooth.c` (the port's smooth motion between the race's steps, F11), `ff.c` (force feedback: the original's
+music, the race's music `0x63d88` and speech `0x722b4`), `audioopt.c` (the audio screen), `gfxopt.c` (the graphics screen `0x32d08`), `ctrlopt.c` (the controls screen `0x22bd0`: kinds, keys redefined, conflicts; the race's keys from them, `drive_keys_from_config` `0x36a0c`), `joystick.c` (the joystick: found, calibrated, `joystick.cfg` in the home folder, read in races and menus), `smooth.c` (the port's smooth motion between the race's steps, F11), `tall.c` (the MiSTer's 320x240 races: the view at 240 rows in the stretched 320x200 screen), `ff.c` (force feedback: the original's
 game side and I-Force commands, equal, `tools/ff_emu.py`) and `ffdev.c` (those commands on SDL's haptics or a
 pad's rumble, or written down), `skid.c` (the tyres' marks: the ring `0x671dc`, the painter `0x679ec`, the line `0x989a0`; their dust `0x664bc`; equal, `tools/skid_emu.py`), `showcase.c` (the cars' showcase `0x17724`: its pages, film and commentary), `trackrec.c` (the track's screen `0x76380` and its Best Times `0x75288`), `credits.c` (the credits `0x25600`: five pages of CREDITS.FSH, 20 s each by the timer's count `0xed0fc`), `loadsave.c` (load and save `0x3c0c8`/`0x3d4c4`, the file list `0x3aacc`: tournaments as `<name>.sav` in the home folder, replays saved, played, deleted; a game on `0x15d134`), `config.c` (CONFIG.DAT; the built-in defaults, equal byte for byte,
 `tools/config_emu.py`), `main.c`.

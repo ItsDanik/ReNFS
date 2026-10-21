@@ -451,9 +451,21 @@ The framework's wheel forces (`MH_Force*`, `hybrid/hps/mister_triggers.c`, branc
 `hybrid/tools/ff_wheel.c`, a fake force-feedback wheel through uinput that prints what it
 is given.
 
-Open: races at 320x240 (the OSD line exists, it races at 320x200 meanwhile); the first
-test on the MiSTer (frame times at 320x200 and 640x480, with and without smooth motion;
-then the defaults); screenshots; ItsDanik/ReNFS_MiSTer once it works and Danik tried it.
+Measured on the MiSTer (2026-10-21, `~/MiSTer-ReNFS/CLAUDE.md`): 320x200 with smooth motion
+59.6 pictures a second with drawing ahead (`mister_present_at`); 640x480 13-24 ms a picture,
+so there smooth motion is off (greyed) and each step is shown once. Danik's decisions: five
+race sizes on the OSD (320x200 default, 320x240, 640x200, 640x240, 640x480), Smooth On.
+Fixed after his first try: the d-pad and mouse kept to the replay bar after the attract
+mode's replay (the mouse limits, also on `main`).
+
+**The five sizes are written (NOTES §4.27), not yet tried on the MiSTer**: 640x240/640x200
+are the 640x480 race with only the shown rows painted; 320x240 the 320x200 screen stretched
+with the view at 240 rows of its own (`tall.c`). The core's FPGA picture rebuilt for the
+new Resolution line. At 640x200 the smallest digits lose a row (OpenScreamer merged a
+glyph's rows for that; not done here).
+
+Open: measuring the new sizes on the MiSTer (ask first); screenshots; ItsDanik/ReNFS_MiSTer
+once it works and Danik tried it; Danik's choice on the framework's wheel forces.
 
 ## Waiting for Danik
 

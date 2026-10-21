@@ -35,7 +35,7 @@ set(RENFS_SOURCES
   src/font.c
   src/menu.c
   src/mainmenu.c src/showcase.c src/trackrec.c
-  src/options.c src/audioopt.c src/gfxopt.c src/ctrlopt.c src/loadsave.c src/credits.c src/joystick.c src/smooth.c
+  src/options.c src/audioopt.c src/gfxopt.c src/ctrlopt.c src/loadsave.c src/credits.c src/joystick.c src/smooth.c src/tall.c
   src/raster.c
   src/poly.c
   src/road.c src/roaddraw.c src/sky.c src/skid.c src/view.c src/car.c src/camera.c src/dash.c src/hud.c src/race.c

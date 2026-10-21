@@ -16,6 +16,22 @@
 
 unsigned char g_fb[FB_MAX_W * FB_MAX_H];
 int g_fb_w = 640, g_fb_h = 480;
+/* (the port's) the picture shown with fewer rows than the game draws (video_rows): each
+   row shown is the game's row g_out_row[y]; 0, all of them */
+static int g_out_h;
+static short g_out_row[FB_MAX_H];
+static unsigned char g_out_shown[FB_MAX_H];    /* the game's rows shown: 1 */
+#define OUT_H (g_out_h ? g_out_h : g_fb_h)
+#define OUT_ROW(y) (g_out_h ? g_out_row[y] : (y))
+static const unsigned char *(*g_out_source)(int y, int row);
+
+/* the pixels of the row shown y */
+static const unsigned char *out_row(int y)
+{
+    if (g_out_source && g_out_h > g_fb_h)
+        return g_out_source(y, OUT_ROW(y));
+    return g_fb + OUT_ROW(y) * g_fb_w;
+}
 int g_quit;
 
 static SDL_Window *g_win;
@@ -248,6 +264,7 @@ void video_mode(int w, int h)
 {
     g_fb_w = w;
     g_fb_h = h;
+    g_out_h = 0;
     memset(g_fb, 0, sizeof g_fb);
 #ifdef MISTER_HYBRID
     if (g_mister) {
@@ -260,6 +277,43 @@ void video_mode(int w, int h)
     g_tex = SDL_CreateTexture(g_ren, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, w, h);
     /* always 4:3, whatever the mode: 320x200 had tall pixels on a 4:3 screen */
     SDL_RenderSetLogicalSize(g_ren, 640, 480);
+}
+
+void video_rows(int rows)
+{
+    if (rows <= 0 || rows == g_fb_h)
+        rows = 0;
+    if (rows == g_out_h)
+        return;
+    g_out_h = rows;
+    /* each shown row the game's at its middle: of 480, every second (0, 2, ..) for 240,
+       one in 2.4 for 200; of 200 for 240, one in five twice */
+    memset(g_out_shown, 0, sizeof g_out_shown);
+    for (int y = 0; y < rows; y++) {
+        g_out_row[y] = (short)((y * g_fb_h * 2 + g_fb_h - rows) / (2 * rows));
+        if (g_out_row[y] < 0)
+            g_out_row[y] = 0;
+        g_out_shown[g_out_row[y]] = 1;
+    }
+#ifdef MISTER_HYBRID
+    if (g_mister) {
+        SDL_SetWindowSize(g_win, g_fb_w, OUT_H);
+        return;
+    }
+#endif
+    if (g_tex)
+        SDL_DestroyTexture(g_tex);
+    g_tex = SDL_CreateTexture(g_ren, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, g_fb_w, OUT_H);
+}
+
+const unsigned char *video_rows_shown(void)
+{
+    return g_out_h && g_out_h < g_fb_h ? g_out_shown : 0;
+}
+
+void video_row_source(const unsigned char *(*f)(int y, int row))
+{
+    g_out_source = f;
 }
 
 void video_palette(const unsigned char *pal, int first, int count)
@@ -301,10 +355,10 @@ static void write_shot(void)
         perror(g_shot);
         return;
     }
-    fprintf(f, "P6\n%d %d\n255\n", g_fb_w, g_fb_h);
-    for (int i = 0; i < g_fb_w * g_fb_h; i++) {
-        int x = i % g_fb_w - g_mouse_x * g_fb_w / 640, y = i / g_fb_w - g_mouse_y * g_fb_h / 480;
-        unsigned char v = g_fb[i];
+    fprintf(f, "P6\n%d %d\n255\n", g_fb_w, OUT_H);
+    for (int i = 0; i < g_fb_w * OUT_H; i++) {
+        int x = i % g_fb_w - g_mouse_x * g_fb_w / 640, y = i / g_fb_w - g_mouse_y * OUT_H / 480;
+        unsigned char v = out_row(i / g_fb_w)[i % g_fb_w];
         if (g_cursor && g_cursor_on && x >= 0 && y >= 0 && x < g_cursor_w &&
             y < g_cursor_h && g_cursor[y * g_cursor_w + x] != 255)
             v = g_cursor[y * g_cursor_w + x];  /* the pointer, as on the screen */
@@ -341,7 +395,7 @@ static void poll(void)
 #ifdef MISTER_HYBRID
             if (g_mister) {                    /* (the window is the picture's size) */
                 mx = mx * 640 / g_fb_w;
-                my = my * 480 / g_fb_h;
+                my = my * 480 / OUT_H;
             }
 #endif
             g_mouse_x = mx < 0 ? 0 : mx > 639 ? 639 : mx;
@@ -429,15 +483,15 @@ static void poll(void)
 static void retrace_mister(void)
 {
     SDL_Surface *s = SDL_GetWindowSurface(g_win);
-    if (s && s->format->BytesPerPixel == 1 && s->format->palette && s->w == g_fb_w && s->h == g_fb_h) {
+    if (s && s->format->BytesPerPixel == 1 && s->format->palette && s->w == g_fb_w && s->h == OUT_H) {
         static unsigned shown[256];
         static int shown_ok;
         unsigned char *px = s->pixels;
-        for (int y = 0; y < g_fb_h; y++)
-            memcpy(px + y * s->pitch, g_fb + y * g_fb_w, (size_t)g_fb_w);
+        for (int y = 0; y < OUT_H; y++)
+            memcpy(px + y * s->pitch, out_row(y), (size_t)g_fb_w);
         if (g_cursor && g_cursor_on) {
-            int mx = g_mouse_x * g_fb_w / 640, my = g_mouse_y * g_fb_h / 480;
-            for (int y = 0; y < g_cursor_h && my + y < g_fb_h; y++)
+            int mx = g_mouse_x * g_fb_w / 640, my = g_mouse_y * OUT_H / 480;
+            for (int y = 0; y < g_cursor_h && my + y < OUT_H; y++)
                 for (int x = 0; x < g_cursor_w && mx + x < g_fb_w; x++) {
                     unsigned char c = g_cursor[y * g_cursor_w + x];
                     if (c != 255)
@@ -479,17 +533,17 @@ void video_retrace(void)
     }
 #endif
     if (SDL_LockTexture(g_tex, 0, &pixels, &pitch) == 0) {
-        for (int y = 0; y < g_fb_h; y++) {
+        for (int y = 0; y < OUT_H; y++) {
             unsigned *row = (unsigned *)((char *)pixels + y * pitch);
-            const unsigned char *src = g_fb + y * g_fb_w;
+            const unsigned char *src = out_row(y);
             for (int x = 0; x < g_fb_w; x++)
                 row[x] = g_rgb[src[x]];
         }
         /* the pointer (0x81600: its top left corner at the mouse; 255 is see-through) */
         /* (the mouse is kept in 640x480's pixels: at 320x200 in the race's) */
         if (g_cursor && g_cursor_on) {
-            int mx = g_mouse_x * g_fb_w / 640, my = g_mouse_y * g_fb_h / 480;
-            for (int y = 0; y < g_cursor_h && my + y < g_fb_h; y++)
+            int mx = g_mouse_x * g_fb_w / 640, my = g_mouse_y * OUT_H / 480;
+            for (int y = 0; y < g_cursor_h && my + y < OUT_H; y++)
                 for (int x = 0; x < g_cursor_w && mx + x < g_fb_w; x++) {
                     unsigned char c = g_cursor[y * g_cursor_w + x];
                     if (c != 255)
@@ -822,7 +876,7 @@ void mouse_place(int x, int y)
     y = g_mouse_y;
 #ifdef MISTER_HYBRID
     if (g_mister) {
-        SDL_WarpMouseInWindow(g_win, x * g_fb_w / 640, y * g_fb_h / 480);
+        SDL_WarpMouseInWindow(g_win, x * g_fb_w / 640, y * OUT_H / 480);
         return;
     }
 #endif

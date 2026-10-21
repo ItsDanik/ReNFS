@@ -7,6 +7,9 @@
 
 view_window g_windows[2][VIEW_WINDOWS];
 int g_view_res;
+int g_race_rows;
+int g_view_tall;
+static view_window g_windows_tall[VIEW_WINDOWS];
 view_rec g_view_ahead, g_view_mirror, g_view_outside;
 const view_rec *g_view_now;
 int g_view_detail;
@@ -63,6 +66,42 @@ void view_init(int res, int car, int horizon)
         w = &g_windows[1][exe_i32(0xe8c80 + 4 * k)];
         w->dy = w->h * d480 / 480;
     }
+
+    /* (the port's) 320x240: the 320x200 windows 6/5 as tall, the lens's picture as tall
+       for its width (the same field of view in square pixels); not those of detail 2
+       (the lists double their rows) nor the mirror's */
+    for (i = 0; i < VIEW_WINDOWS; i++) {
+        const view_window *lo = &g_windows[0][i];
+        view_window *t = &g_windows_tall[i];
+        int bottom = (lo->y + lo->ch) * 6 / 5;
+
+        *t = *lo;
+        t->tall = g_view_tall && lo->squash && i != g_view_mirror.mode;
+        for (k = 0; k < 0x16c / 52 && t->tall; k++)    /* (the empty layouts' all 0) */
+            if (exe_i32(0xe8b10 + 52 * k + 4 + 4 * 2) == i && exe_i32(0xe8b10 + 52 * k + 4) != i)
+                t->tall = 0;
+        if (!t->tall)
+            continue;
+        t->squash = lo->squash * 6 / 5;
+        t->dy = lo->dy * 6 / 5;
+        t->h = lo->h * 6 / 5;
+        t->y = lo->y * 6 / 5;
+        t->ch = bottom - t->y;
+    }
+}
+
+/* the window `mode` of the views ahead and outside, or the mirror's */
+static const view_window *window_of(const view_rec *v, int mode)
+{
+    if (g_view_tall && !g_view_res && v != &g_view_mirror)
+        return &g_windows_tall[mode];
+    return &g_windows[g_view_res][mode];
+}
+
+const view_window *view_window_lo(const view_window *w)
+{
+    return w >= g_windows_tall && w < g_windows_tall + VIEW_WINDOWS
+        ? &g_windows[0][w - g_windows_tall] : w;
 }
 
 /* the lens (0x14284: 0x83c18, 0x83c5b): the centre in the middle of what it covers, the
@@ -78,7 +117,7 @@ static void lens(int x, int y, int w, int h, int fov)
 
 void view_setup(view_rec *v, int mode)
 {
-    const view_window *w = &g_windows[g_view_res][mode];
+    const view_window *w = window_of(v, mode);
 
     v->mode = mode;
     v->win = w;

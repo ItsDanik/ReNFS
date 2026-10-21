@@ -188,6 +188,7 @@ static void menu(void)
     pal_fade_down(0, 256);
     if (!g_view_res)
         video_mode(640, 480);
+    video_rows(0);                         /* (the port's 640x240 and 640x200: all of it) */
     place(CONTINUE);
     fe_font_load();
     fe_mouse_load();
@@ -346,6 +347,7 @@ static void menu(void)
     music_wait_end();
     if (!g_view_res)                       /* (0x580a9) */
         video_mode(320, 200);
+    video_rows(g_race_rows);
     video_palette(race_pal, 0, 256);
     memcpy(g_session.kept, g_config + 9, sizeof g_session.kept);   /* (0x5809d) */
     fe_sound_unmute();                     /* (0x58107: F5's silence ends here) */

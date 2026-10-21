@@ -8,10 +8,12 @@
    picture positions in 16.16. The picture is stepped straight across each row (no
    perspective: draw_quad 0x35b04 cuts the far pieces smaller instead). */
 #include "raster.h"
+#include <string.h>
 
 /* the window (0xf88a4 x0, 0xf88a8 y0, 0xf88ac x1, 0xf88b0 y1: the ends outside) */
 static unsigned char *g_base;
 static int g_pitch, g_x0, g_y0, g_x1, g_y1;
+const unsigned char *g_raster_shown;
 
 /* the edge tables, a row each (0x300 at most): left and right x, and u, v at both ends.
    The original keeps them on its stack, so a row no edge reached keeps what was there */
@@ -26,6 +28,12 @@ void raster_window(unsigned char *base, int pitch, int x0, int y0, int x1, int y
     g_y0 = y0;
     g_x1 = x1;
     g_y1 = y1 > ROWS ? ROWS : y1;
+    g_raster_shown = 0;
+}
+
+void raster_rows(const unsigned char *shown)
+{
+    g_raster_shown = shown;
 }
 
 unsigned char *raster_row(int y)
@@ -52,9 +60,10 @@ void raster_fill(int x, int y, int w, int h, int colour)
         x1 = g_x1;
     if (y1 > g_y1)
         y1 = g_y1;
-    for (; y < y1; y++)
-        for (w = x; w < x1; w++)
-            g_base[y * g_pitch + w] = (unsigned char)colour;
+    if (x1 > x)
+        for (; y < y1; y++)
+            if (RASTER_SHOWN(y))
+                memset(g_base + y * g_pitch + x, colour, (size_t)(x1 - x));
 }
 
 static int shl16(int v)
@@ -199,7 +208,7 @@ void raster_quad(const raster_tex *t, const int uv[8], const int xy[8])
             y--;
             continue;
         }
-        if (g_x1 <= l || g_x0 > r)
+        if (g_x1 <= l || g_x0 > r || !RASTER_SHOWN(y))
             continue;
         u = g_lu[y];
         v = g_lv[y];
@@ -274,7 +283,7 @@ static void rows(const raster_tex *t, tri_rows *r, int end)
             l += skip;
         } else
             skip = 0;
-        if (n > 0 && r->row >= g_y0 && skip + n <= STEPS) {
+        if (n > 0 && r->row >= g_y0 && skip + n <= STEPS && RASTER_SHOWN(r->row)) {
             const unsigned char *src = t->pixels + (r->v >> 16) * t->rowbytes + (r->u >> 16) +
                                        g_steps[skip];
             unsigned char *dst = g_base + r->row * g_pitch + l;

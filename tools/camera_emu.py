@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from snap_emu import Snap
 from poly_emu import Vec3
 
-SOURCES = ["ff.c", "ffdev.c", "camera.c", "car.c", "model.c", "polyfill.c", "dash.c", "hud.c", "config.c", "view.c", "sky.c", "roaddraw.c", "trackinfo.c", "road.c", "poly.c",
+SOURCES = ["ff.c", "ffdev.c", "camera.c", "car.c", "model.c", "polyfill.c", "dash.c", "hud.c", "tall.c", "config.c", "view.c", "sky.c", "roaddraw.c", "trackinfo.c", "road.c", "poly.c",
            "raster.c", "track.c", "files.c", "exe.c", "trackfam.c", "racepal.c", "font.c", "video.c",
            "fsh.c", "unpack.c", "crash.c", "smoke.c", "drive.c", "cardraw.c", "skid.c", "timing.c", "opponent.c", "collide.c",
            "sndlib.c", "racesnd.c", "audio.c", "sound.c", "eacs.c"]

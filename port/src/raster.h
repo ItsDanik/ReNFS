@@ -14,6 +14,13 @@ typedef struct {
    x0..x1, y0..y1 (the ends outside) */
 void raster_window(unsigned char *base, int pitch, int x0, int y0, int x1, int y1);
 
+/* (the port's) the rows of the window's picture that will be shown, a byte a row (the
+   MiSTer's 640x240 and 640x200 races): the others are left as they are; 0 all of them.
+   Until the next raster_window */
+void raster_rows(const unsigned char *shown);
+extern const unsigned char *g_raster_shown;
+#define RASTER_SHOWN(y) (!g_raster_shown || g_raster_shown[y])
+
 /* the window's picture: a row's start, and the window */
 unsigned char *raster_row(int y);
 void raster_clip(int *x0, int *y0, int *x1, int *y1);
