@@ -458,13 +458,14 @@ race sizes on the OSD (320x200 default, 320x240, 640x200, 640x240, 640x480), Smo
 Fixed after his first try: the d-pad and mouse kept to the replay bar after the attract
 mode's replay (the mouse limits, also on `main`).
 
-**The five sizes are written (NOTES §4.27), not yet tried on the MiSTer**: 640x240/640x200
+**The five sizes are written (NOTES §4.27) and measured on the MiSTer** (all near 60 with
+smooth motion; 640x240 drops to 57 in busy scenes; numbers in `~/MiSTer-ReNFS/CLAUDE.md`): 640x240/640x200
 are the 640x480 race with only the shown rows painted; 320x240 the 320x200 screen stretched
 with the view at 240 rows of its own (`tall.c`). The core's FPGA picture rebuilt for the
 new Resolution line. At 640x200 the smallest digits lose a row (OpenScreamer merged a
 glyph's rows for that; not done here).
 
-Open: measuring the new sizes on the MiSTer (ask first); screenshots; ItsDanik/ReNFS_MiSTer
+Open: Danik trying the sizes on his screens; screenshots; ItsDanik/ReNFS_MiSTer
 once it works and Danik tried it; Danik's choice on the framework's wheel forces.
 
 ## Waiting for Danik

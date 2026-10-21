@@ -93,7 +93,8 @@ static void perf(int at, unsigned steps)
     if (++frames, now - t0 >= 5 * SDL_GetPerformanceFrequency()) {
         double f = (double)SDL_GetPerformanceFrequency(), s = (now - t0) / f;
         printf("perf: %dx%d smooth %d: %.1f pictures a second, %.1f steps; each %.1f ms, "
-               "the slowest %.1f ms; the steps %.1f ms a picture\n", H(320, 640), H(200, 480), g_smooth,
+               "the slowest %.1f ms; the steps %.1f ms a picture\n", H(320, 640),
+               g_race_rows ? g_race_rows : H(200, 480), g_smooth,
                frames / s, (steps - steps0) / s, work * 1000.0 / f / frames, worst * 1000.0 / f,
                stepping * 1000.0 / f / frames);
         fflush(stdout);
