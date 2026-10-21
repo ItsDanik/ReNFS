@@ -465,8 +465,10 @@ with the view at 240 rows of its own (`tall.c`). The core's FPGA picture rebuilt
 new Resolution line. At 640x200 the smallest digits lose a row (OpenScreamer merged a
 glyph's rows for that; not done here).
 
-Open: Danik trying the sizes on his screens; screenshots; ItsDanik/ReNFS_MiSTer
-once it works and Danik tried it; Danik's choice on the framework's wheel forces.
+Danik tried them all (2026-10-22: everything looks right, HUD (Bottom) and the movies
+included); the core's README has screenshots of the new sizes. The wheel forces are in
+Hybrid_MiSTer's main (merge 4fc0233, on GitHub). Open: ItsDanik/ReNFS_MiSTer, when Danik
+says.
 
 ## Waiting for Danik
 
