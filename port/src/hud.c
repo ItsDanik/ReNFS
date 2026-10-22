@@ -669,11 +669,14 @@ static void bamf_copy(const hud_picture *from, const unsigned char *list)
     const unsigned char *p = list + 0x14;
     int banks, b, n, i, sr, sc, dr, dc, len, k, j;
     unsigned so, d, rate;
+    const unsigned char *shown;
 
     if (!list || memcmp(list, "BAMF", 4) != 0)
         return;
     rate = (unsigned)u16(list + 0xc) | (unsigned)u16(list + 0xe) << 16;
     banks = u16(list + 8);
+    /* (the port's 640x240 and 640x200: the screen's rows not shown are left as they are) */
+    shown = g_win.pix == g_fb ? video_rows_shown() : 0;
     for (b = 0; b < banks; b++) {
         n = u16(p);
         p += 2;
@@ -690,7 +693,9 @@ static void bamf_copy(const hud_picture *from, const unsigned char *list)
                 unsigned char *dst = g_win.pix + (long)dr * g_win.w + dc;
 
                 k = dc + len > g_win.w ? g_win.w - dc : len;
-                if (rate == 0x10000)
+                if (shown && !shown[dr])
+                    ;
+                else if (rate == 0x10000)
                     memmove(dst, src, k);
                 else
                     for (j = 0; j < k; j++)

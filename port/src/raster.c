@@ -8,6 +8,7 @@
    picture positions in 16.16. The picture is stepped straight across each row (no
    perspective: draw_quad 0x35b04 cuts the far pieces smaller instead). */
 #include "raster.h"
+#include <stdint.h>
 #include <string.h>
 
 /* the window (0xf88a4 x0, 0xf88a8 y0, 0xf88ac x1, 0xf88b0 y1: the ends outside) */
@@ -117,6 +118,12 @@ static void edge_uv(int *table, int y, int n, int a0, int a1, int xslope, int ri
         a += step;
     if (!edge_rows(&y, &n, &a, step))
         return;
+    if (g_raster_shown) {          /* (the port's: only the rows painted are read) */
+        for (; n > 0; n--, a += step, y++)
+            if (g_raster_shown[y])
+                table[y] = a;
+        return;
+    }
     for (; n > 0; n--, a += step)
         table[y++] = a;
 }
@@ -145,24 +152,103 @@ static void edges(const int uv[8], const int xy[8], int top, int bottom, int dir
     }
 }
 
+/* (the port's) whether the pixels from `first` to `last`, as offsets from the picture's
+   start, all lie in the memory it was loaded in (lo..hi) */
+static int inside(const raster_tex *t, long long first, long long last)
+{
+    long long lo = (long long)((intptr_t)t->lo - (intptr_t)t->pixels);
+    long long hi = (long long)((intptr_t)t->hi - (intptr_t)t->pixels);
+    return first >= lo && last < hi;
+}
+
 /* one row (0xa7a4c, 0xa7610 skipping colour 255): the picture's whole part and fraction
-   stepped apart, as the original's carries do */
+   stepped apart, as the original's carries do. The k-th pixel is the picture's at the
+   whole parts of u + k·du and v + k·dv, each going one way along the row, so the first
+   and last pixel's bound them all: a row inside the picture's memory is painted without
+   looking at each pixel (the port's, the same pixels) */
+#define SPAN_STEP                                                                  \
+    do {                                                                           \
+        uf += duf;                                                                 \
+        p += step + (uf < duf);                                                    \
+        vf += dvf;                                                                 \
+        if (vf < dvf)                                                              \
+            p += rb;                                                               \
+    } while (0)
+
 static void span(const raster_tex *t, unsigned char *dst, int u, int du, int v, int dv,
                  int n, int see_through)
 {
-    const unsigned char *p = t->pixels + (v >> 16) * t->rowbytes + (u >> 16);
-    int step = (dv >> 16) * t->rowbytes + (du >> 16);
-    unsigned uf = u & 0xffff, vf = v & 0xffff;
+    const int rb = t->rowbytes;
+    const unsigned char *p = t->pixels + (v >> 16) * rb + (u >> 16);
+    const int step = (dv >> 16) * rb + (du >> 16);
+    /* the fractions at the top of a word, so that a carry out of them is the sum's wrap */
+    unsigned uf = (unsigned)u << 16, vf = (unsigned)v << 16;
+    const unsigned duf = (unsigned)du << 16, dvf = (unsigned)dv << 16;
+    unsigned char *const end = dst + n;
+
+    if (n <= 0)
+        return;
+    if (rb > 0) {
+        long long u0 = u >> 16, v0 = v >> 16;
+        long long u1 = ((long long)u + (long long)du * (n - 1)) >> 16;
+        long long v1 = ((long long)v + (long long)dv * (n - 1)) >> 16;
+        long long first = (v0 < v1 ? v0 : v1) * rb + (u0 < u1 ? u0 : u1);
+        long long last = (v0 < v1 ? v1 : v0) * rb + (u0 < u1 ? u1 : u0);
+
+        if (inside(t, first, last)) {
+            if (see_through)
+                for (; dst != end; dst++) {
+                    unsigned char c = *p;
+                    if (c != 255)
+                        *dst = c;
+                    SPAN_STEP;
+                }
+            else
+                for (; dst != end; dst++) {
+                    *dst = *p;
+                    SPAN_STEP;
+                }
+            return;
+        }
+    }
     for (; n > 0; n--, dst++) {
         unsigned char c = p >= t->lo && p < t->hi ? *p : 0;
         if (!see_through || c != 255)
             *dst = c;
-        uf += du & 0xffff;
-        vf += dv & 0xffff;
-        p += step + (int)(uf >> 16) + (vf >> 16 ? t->rowbytes : 0);
-        uf &= 0xffff;
-        vf &= 0xffff;
+        SPAN_STEP;
     }
+}
+
+/* (the port's) a / n, rounded toward 0 as C's, without a division for |a| < 2^24 and
+   n < 2048 (the MiSTer's ARM has none: each is a call of some 40 cycles). By a
+   multiply: m = 2^(24 + l) / n + 1, l the bits of n - 1, gives the same quotient for
+   every such a (Granlund and Montgomery, 1994: m·n exceeds 2^(24 + l) by at most 2^l) */
+#define RECIP_N 2048
+static unsigned g_recip[RECIP_N];
+static unsigned char g_recip_shift[RECIP_N];
+
+static void recip_init(void)
+{
+    int n, l;
+
+    for (n = 1; n < RECIP_N; n++) {
+        for (l = 0; (1 << l) < n; l++)
+            ;
+        g_recip_shift[n] = (unsigned char)(24 + l);
+        g_recip[n] = (unsigned)((1ull << (24 + l)) / (unsigned)n + 1);
+    }
+}
+
+static int div_row(int a, int n)
+{
+    unsigned m = a < 0 ? 0u - (unsigned)a : (unsigned)a, q;
+
+    if (n <= 0 || n >= RECIP_N || m >= 1u << 24)
+        return a / n;
+    if (!g_recip[1])
+        recip_init();
+    q = (unsigned)((unsigned long long)m * g_recip[n] >> g_recip_shift[n]);
+    return a < 0 ? -(int)q : (int)q;
 }
 
 void raster_quad(const raster_tex *t, const int uv[8], const int xy[8])
@@ -212,8 +298,8 @@ void raster_quad(const raster_tex *t, const int uv[8], const int xy[8])
             continue;
         u = g_lu[y];
         v = g_lv[y];
-        du = (g_ru[y] - u) / n;
-        dv = (g_rv[y] - v) / n;
+        du = div_row(g_ru[y] - u, n);
+        dv = div_row(g_rv[y] - v, n);
         if (l < g_x0) {
             u += du * (g_x0 - l);
             v += dv * (g_x0 - l);
@@ -233,6 +319,8 @@ void raster_quad(const raster_tex *t, const int uv[8], const int xy[8])
 
 #define STEPS 0x604                    /* (0x6000000 >> 16) + 1, written in pairs (0x15ed1c) */
 static int g_steps[STEPS];
+/* (the port's) the least and greatest of g_steps[0..i], for the steps worked out last */
+static int g_steps_lo[STEPS], g_steps_hi[STEPS], g_steps_n;
 
 /* where a row's pixels read, from where it starts: the picture stepped du, dv a pixel from
    half way into the first one (0xa6240). A width of a power of two (0 too) is shifted */
@@ -247,15 +335,33 @@ static void row_steps(int du, int dv, int w, int n)
     if (n > STEPS)
         n = STEPS;
     for (i = 0; i < n; i++, u += (unsigned)du, v += (unsigned)dv) {
-        int row = (int)v >> 16;
-        g_steps[i] = (shift >= 0 ? (int)((unsigned)row << shift) : row * w) + ((int)u >> 16);
+        int row = (int)v >> 16, k;
+        g_steps[i] = k = (shift >= 0 ? (int)((unsigned)row << shift) : row * w) + ((int)u >> 16);
+        g_steps_lo[i] = i && g_steps_lo[i - 1] < k ? g_steps_lo[i - 1] : k;
+        g_steps_hi[i] = i && g_steps_hi[i - 1] > k ? g_steps_hi[i - 1] : k;
     }
+    g_steps_n = n;
+}
+
+/* (the port's) n / d rounded toward 0 and taken to 32 bits, as C's 64-bit division,
+   through a double where that is the same (the MiSTer's ARM divides 64 bits in a routine
+   of some 150 cycles, a double in 30): n below 2^53 is exact in a double, and the
+   quotient's rounding, at most |n / d| / 2^53 < 1 / |d|, cannot reach a whole number the
+   true quotient is short of. n's halves made doubles apart (whole ints the FPU takes) */
+static int div64(long long n, int d)
+{
+    if (d && n > -(1ll << 53) && n < 1ll << 53) {
+        double q = ((double)(int)(n >> 32) * 4294967296.0 + (double)(unsigned)n) / d;
+        if (q > -2147483648.0 && q < 2147483648.0)
+            return (int)q;
+    }
+    return (int)(n / d);
 }
 
 /* (a << 16) / b in 64 bits, as the original's shld and idiv; a itself when b is 0 */
 static int div16(int a, int b)
 {
-    return b ? (int)((long long)a * 65536 / b) : a;
+    return b ? div64((long long)a * 65536, b) : a;
 }
 
 static int sub(int a, int b)
@@ -287,13 +393,29 @@ static void rows(const raster_tex *t, tri_rows *r, int end)
             const unsigned char *src = t->pixels + (r->v >> 16) * t->rowbytes + (r->u >> 16) +
                                        g_steps[skip];
             unsigned char *dst = g_base + r->row * g_pitch + l;
+            long long at = (long long)(r->v >> 16) * t->rowbytes + (r->u >> 16);
             int i;
-            for (i = 0; i < n; i++) {
-                const unsigned char *p = src + g_steps[i];
-                unsigned char c = p >= t->lo && p < t->hi ? *p : 0;
-                if (!t->see_through || c != 255)
-                    dst[i] = c;
-            }
+            /* (the port's) a row whose pixels all lie in the picture's memory painted
+               without looking at each: steps worked out this time only */
+            if (skip < g_steps_n && n <= g_steps_n
+                && inside(t, at + g_steps[skip] + g_steps_lo[n - 1],
+                          at + g_steps[skip] + g_steps_hi[n - 1])) {
+                if (t->see_through)
+                    for (i = 0; i < n; i++) {
+                        unsigned char c = src[g_steps[i]];
+                        if (c != 255)
+                            dst[i] = c;
+                    }
+                else
+                    for (i = 0; i < n; i++)
+                        dst[i] = src[g_steps[i]];
+            } else
+                for (i = 0; i < n; i++) {
+                    const unsigned char *p = src + g_steps[i];
+                    unsigned char c = p >= t->lo && p < t->hi ? *p : 0;
+                    if (!t->see_through || c != 255)
+                        dst[i] = c;
+                }
         }
         r->u += r->su;
         r->v += r->sv;
@@ -328,14 +450,14 @@ static void tri(const raster_tex *t, const int uv[6], const int xy[6])
     xm = xy[m * 2], ym = xy[m * 2 + 1], um = uv[m * 2], vm = uv[m * 2 + 1];
 
     /* the long edge where the middle corner's row crosses it, and the width there */
-    xlm = xb + (int)((long long)sub(xt, xb) * sub(ym, yb) / dy);
+    xlm = xb + div64((long long)sub(xt, xb) * sub(ym, yb), dy);
     w = sub(xm, xlm);
     left = w < 0;                      /* the middle corner on the left */
     wabs = left ? (int)(0u - (unsigned)w) : w;
     if (wabs < 0x10000 || wabs >= 0x6000000)
         return;
-    ulm = ut + (int)((long long)sub(ub, ut) * sub(yt, ym) / dy);
-    vlm = vt + (int)((long long)sub(vb, vt) * sub(yt, ym) / dy);
+    ulm = ut + div64((long long)sub(ub, ut) * sub(yt, ym), dy);
+    vlm = vt + div64((long long)sub(vb, vt) * sub(yt, ym), dy);
     row_steps(div16(sub(um, ulm), w), div16(sub(vm, vlm), w), t->rowbytes, (wabs >> 16) + 1);
 
     /* from the top corner down to the middle one's row: the picture follows the left side */

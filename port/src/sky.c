@@ -8,6 +8,7 @@
 #include "trackinfo.h"
 #include "view.h"
 #include "polyfill.h"
+#include <stdint.h>
 
 int g_sky_steps[0x400];   /* 0x12df40: a column's x in the picture, from the middle */
 unsigned char g_sky_rows[480];  /* 0x12dd60: a screen row's row of the picture */
@@ -66,12 +67,19 @@ static unsigned char pixel(const unsigned char *pix, long at)
     return p >= g_fam.file && p < g_fam.file + g_fam.len ? *p : 0;
 }
 
+/* (the port's) whether pix + first .. pix + last all lie in the family's memory */
+static int inside(const unsigned char *pix, long long first, long long last)
+{
+    long long at = (long long)((intptr_t)pix - (intptr_t)g_fam.file);
+    return at + first >= 0 && at + last < (long long)g_fam.len;
+}
+
 /* the picture's rows from screen row `top` (0x49bdc), from picture column `off` at the
    middle: what falls off one end comes round from the other */
 static void strip(const unsigned char *shape, int off, int x, int top)
 {
     int w = rd16(shape + 4), h = rd16(shape + 6), n = fixmul(h - 1, g_squash), skip = 0;
-    int x0, y0, x1, y1, k, rest, i, j, row = 1;
+    int x0, y0, x1, y1, k, rest, i, j, row = 1, lo_part[2], hi_part[2];
     const unsigned char *pix = shape + 16;
 
     raster_clip(&x0, &y0, &x1, &y1);
@@ -91,6 +99,22 @@ static void strip(const unsigned char *shape, int off, int x, int top)
         while (k < g_columns && g_sky_steps[k] + off < w)
             k++;
     rest = g_columns - k;
+    /* (the port's) the least and greatest step of each part, so that a row inside the
+       family's memory is painted without looking at each pixel */
+    {
+        int lo1 = 0, hi1 = -1, lo2 = 0, hi2 = -1;
+        for (j = 0; j < k; j++) {
+            lo1 = !j || g_sky_steps[j] < lo1 ? g_sky_steps[j] : lo1;
+            hi1 = !j || g_sky_steps[j] > hi1 ? g_sky_steps[j] : hi1;
+        }
+        for (j = 0; j < rest; j++) {
+            lo2 = !j || g_sky_steps[k + j] < lo2 ? g_sky_steps[k + j] : lo2;
+            hi2 = !j || g_sky_steps[k + j] > hi2 ? g_sky_steps[k + j] : hi2;
+        }
+        lo2 -= w;
+        hi2 -= w;
+        lo_part[0] = lo1, hi_part[0] = hi1, lo_part[1] = lo2, hi_part[1] = hi2;
+    }
     for (i = 0; i < n && skip + i >= 0 && skip + i < 480; i++) {
         unsigned char *dst;
         if (top + i < y0 || top + i >= y1)
@@ -100,6 +124,15 @@ static void strip(const unsigned char *shape, int off, int x, int top)
             continue;
         dst = raster_row(top + i) + x;
         long at = (long)(g_sky_rows[skip + i] + row) * w + off;
+        if ((!k || inside(pix, at + lo_part[0], at + hi_part[0]))
+            && (!rest || inside(pix, at + lo_part[1], at + hi_part[1]))) {
+            const unsigned char *a = pix + at, *b = a - w;
+            for (j = 0; j < k; j++)
+                dst[j] = a[g_sky_steps[j]];
+            for (j = 0; j < rest; j++)
+                dst[k + j] = b[g_sky_steps[k + j]];
+            continue;
+        }
         for (j = 0; j < k; j++)
             dst[j] = pixel(pix, at + g_sky_steps[j]);
         for (j = 0; j < rest; j++)

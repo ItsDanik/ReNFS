@@ -440,6 +440,33 @@ static void write_shot(void)
     printf("%s: frame %lu\n", g_shot, g_retraces);
 }
 
+/* RENFS_SHOTSUMS=f: under --shot, a sum of every picture shown (its rows as shown and
+   its colours) written to f, a line a retrace: for checking that a change to the painters
+   leaves every picture as it was */
+static void shot_sum(void)
+{
+    static FILE *f;
+    static int tried;
+    unsigned h = 2166136261u;
+
+    if (!tried) {
+        tried = 1;
+        if (getenv("RENFS_SHOTSUMS") && !(f = fopen(getenv("RENFS_SHOTSUMS"), "w")))
+            perror(getenv("RENFS_SHOTSUMS"));
+    }
+    if (!f)
+        return;
+    for (int y = 0; y < OUT_H; y++) {
+        const unsigned char *row = out_row(y);
+        for (int x = 0; x < g_fb_w; x++)
+            h = (h ^ row[x]) * 16777619u;
+    }
+    for (int i = 0; i < 256; i++)
+        h = (h ^ g_rgb[i]) * 16777619u;
+    fprintf(f, "%lu %dx%d %08x\n", g_retraces, g_fb_w, OUT_H, h);
+    fflush(f);
+}
+
 /* (the port's) a pad's Start held: Esc, which the original's joystick has not (the pause
    menu in a race, back in the menus) */
 static int g_pad_esc;
@@ -637,6 +664,7 @@ void video_retrace(void)
     if (g_retrace_hook)
         g_retrace_hook();
     if (g_shot) {
+        shot_sum();
         if ((int)g_retraces >= g_shot_at) {
             write_shot();
             g_quit = 1;
