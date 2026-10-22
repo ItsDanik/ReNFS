@@ -131,6 +131,8 @@ void fe_sound_mute(void)
     settimeout(12000);
 }
 
+static void sound_service(void);
+
 /* the music */
 static struct {
     unsigned char *d;
@@ -233,7 +235,7 @@ void music_start(const char *name)
         return;
     }
     g_music.loop = -1;
-    g_retrace_hook = music_service;
+    g_retrace_hook = sound_service;
     music_service();
 }
 
@@ -313,8 +315,34 @@ void music_volume(int v)
         audio_stream_volume(g_music.stream, g_music.volume);
 }
 
-/* the race's spoken word (0x9901f's queue on its own voice): one at a time */
+/* the race's spoken word (0x9901f's queue on its own voice): one at a time. Read whole
+   and handed to the sound device half a second ahead at every retrace, as the music: the
+   showcase's commentaries last a minute, and converting a minute at once to the device's
+   rate took seconds on the MiSTer, with the sound held meanwhile */
 static int g_speech = -1;
+static struct {
+    short *out;
+    int n, pos, rate, channels;
+} g_say;
+
+static void speech_service(void)
+{
+    while (g_say.out && g_say.pos < g_say.n && audio_stream_queued(g_speech) < g_say.rate / 2) {
+        int k = g_say.n - g_say.pos < g_say.rate / 8 ? g_say.n - g_say.pos : g_say.rate / 8;
+        audio_stream_put(g_speech, g_say.out + (long)g_say.pos * g_say.channels, k);
+        g_say.pos += k;
+    }
+    if (g_say.out && g_say.pos >= g_say.n) {
+        free(g_say.out);
+        g_say.out = 0;
+    }
+}
+
+static void sound_service(void)
+{
+    music_service();
+    speech_service();
+}
 
 void speech_say(const char *name)
 {
@@ -333,19 +361,24 @@ void speech_say(const char *name)
         fprintf(stderr, "renfs: %s is missing\n", path);
         return;
     }
-    /* all of it (the showcase's commentaries last a minute) */
     if (eacs_header(&h, d, len) && h.data > 0 && h.data < len && h.samples > 0 &&
         (out = malloc(sizeof *out * (size_t)h.samples * (size_t)h.channels))) {
         n = eacs_sound(&h, d + h.data, len - h.data, out, (int)h.samples);
         /* (0x98f66 empties the queue) the sounds' volume and a half, 127 at most */
-        audio_stream_close(g_speech);
+        speech_stop();
         g_speech = audio_stream_open(h.rate, h.channels);
-        if (g_speech >= 0) {
+        if (g_speech >= 0 && n > 0) {
             v = config_word(CFG_SFX_VOLUME) * 3 / 2;
             audio_stream_volume(g_speech, v > 127 ? 127 : v);
-            audio_stream_put(g_speech, out, n);
-        }
-        free(out);
+            g_say.out = out;
+            g_say.n = n;
+            g_say.pos = 0;
+            g_say.rate = h.rate > 0 ? h.rate : 22050;
+            g_say.channels = h.channels;
+            g_retrace_hook = sound_service;
+            speech_service();
+        } else
+            free(out);
     }
     free(d);
 }
@@ -354,6 +387,8 @@ void speech_stop(void)
 {
     audio_stream_close(g_speech);
     g_speech = -1;
+    free(g_say.out);
+    g_say.out = 0;
 }
 
 void music_stop_now(void)
