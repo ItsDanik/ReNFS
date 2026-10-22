@@ -68,8 +68,18 @@ int movie_play(const char *name)
                 ended = 1;
                 break;
             }
-            for (int y = 0; y < t.h && y < g_fb_h; y++)
-                memcpy(g_fb + y * g_fb_w, t.cur + y * t.w, t.w < g_fb_w ? t.w : g_fb_w);
+            /* (0x34c4e) in the middle of the screen, at a multiple of 4: the 320x192
+               films 24 rows down */
+            {
+                int x0 = ((g_fb_w - t.w) / 2 + 3) & ~3, y0 = ((g_fb_h - t.h) / 2 + 3) & ~3;
+                if (x0 < 0)
+                    x0 = 0;
+                if (y0 < 0)
+                    y0 = 0;
+                for (int y = 0; y < t.h && y0 + y < g_fb_h; y++)
+                    memcpy(g_fb + (y0 + y) * g_fb_w + x0, t.cur + y * t.w,
+                           t.w < g_fb_w - x0 ? t.w : g_fb_w - x0);
+            }
             if (t.new_palette) {
                 video_palette(t.pal, 0, 256);
                 t.new_palette = 0;
