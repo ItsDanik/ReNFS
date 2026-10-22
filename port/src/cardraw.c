@@ -9,6 +9,7 @@
 #include "roaddraw.h"
 #include "skid.h"
 #include "smoke.h"
+#include "timing.h"
 #include "track.h"
 #include "video.h"
 #include <string.h>
@@ -36,9 +37,14 @@ void cars_list(void)
 {
     int i;
 
+    /* (0x51f8f) only the cars on the road, in the road's order (0x13c298), walked from
+       its end as drawn: the police car out of the race (part without 4: at the start, or
+       after a chase) is not drawn where it was left, as it is not met nor heard there */
     g_car_order_n = 0;
     for (i = 0; i < g_ncars; i++) {
-        race_car *c = g_cars[i];
+        race_car *c = g_cars[g_timing.by_road[i]];
+        if (!(c->part & 4) || !c->routine)
+            continue;
         c->draw_node = c->mirror_node = c->node;
         g_car_order[g_car_order_n++] = c;
     }

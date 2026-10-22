@@ -481,9 +481,14 @@ the 320x192 ones 24 rows down). The last two also on `main`, pushed.
 frame for frame on the PC and the ARM build under qemu; `tools/checks.sh` all equal). Danik's
 heaviest scene, the alpine replay from the SKY camera at 640x240 with smooth motion, on the
 MiSTer: 14.0 ms a picture to 8.4, 56.3 pictures a second to 59.6, fields without a new picture
-605 of 9000 to 6 (`~/MiSTer-ReNFS/CLAUDE.md`). Still to try: 640x480 measured again (smooth
-motion there may now pay), and if more is wanted, the painting split over the ARM's two cores
-(the second only copies the pictures to the core). Not yet: pushing the `mister` branch and
+605 of 9000 to 6 (`~/MiSTer-ReNFS/CLAUDE.md`). Danik: "performance is great".
+**Possible future optimizations (not now, Danik 2026-10-22):** 640x480 measured again (smooth
+motion there may now pay); the painting split over the ARM's two cores (the second only
+copies the pictures to the core).
+**Fixed the same day (Danik):** "stray" police cars coming from the left, not on the radar,
+not chasing, driven through (AL1 head to head at 10 s): the police car out of the race was
+drawn where it was left; the cars drawn now as the original lists them (NOTES §4.10,
+`cars_list`). Not yet: pushing the `mister` branch and
 creating ItsDanik/ReNFS_MiSTer (Danik: after the optimisations).
 
 ## Waiting for Danik

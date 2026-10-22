@@ -2177,6 +2177,13 @@ the racers' markers are in since, still 0 pixels differing).**
 **Which road rows have a car.** The race's step (`0x51f8f`) lists the cars on the road in
 `0x13c224` (count `0x13c220`): for each car of the order `0x13c298` with `+0x51a` & 4 and
 `+0x50e` ≠ 0, `+0x341` = `+0x345` = its node, `+0x349` its `+0x39d`, `+0x34d` its angles.
+(The port listed every car in slot order until 2026-10-22, Danik: "stray" police cars
+facing the player, no radar, no chase, driven through: the police car out of the race,
+parked at the start at node 59 of AL1 or left where a chase ended, was drawn there. Now
+`cars_list` keeps the original's test and order, once a picture: the cars' places and
+angles drawn are the step's, so the list is the same between steps. The order also puts a
+nearer car over a further one on the same node, as the original: REPLAY1 at 15 s drew a
+911 ahead over the player's car. The CD's replays still equal at every snapshot.)
 Each frame `0x678a4` clears `0x14e5d0[35]` and, for every car not in state 6 (`+0x512`),
 takes node = `+0x341`, one less when `+0x39d` − 0x29999 < 0 (near the start of its node),
 plus 4 · length below 0, **writes it back to `+0x341`** (a second frame between two steps
