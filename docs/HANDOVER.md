@@ -476,11 +476,15 @@ the speech fed half a second ahead at every retrace (a showcase commentary conve
 once held the game and the music 2 to 4 s); the films centred as the original (0x34c4e,
 the 320x192 ones 24 rows down). The last two also on `main`, pushed.
 
-**Next (Danik, 2026-10-22): make the rendering as fast as possible**, in a new session.
-The numbers to start from are in `~/MiSTer-ReNFS/CLAUDE.md` (Replay 1, `RENFS_PERF=1`;
-640x240 drops to 57 in busy scenes, 640x480 13-24 ms a picture). Every change must keep
-`tools/checks.sh` equal. Not yet: pushing the `mister` branch and creating
-ItsDanik/ReNFS_MiSTer (Danik: after the optimisations).
+**The rendering made faster (2026-10-22, NOTES §4.28)**, every picture the same
+(`RENFS_SHOTSUMS`: the CD's four replays at the five sizes, three races, HUD (Bottom) lifted,
+frame for frame on the PC and the ARM build under qemu; `tools/checks.sh` all equal). Danik's
+heaviest scene, the alpine replay from the SKY camera at 640x240 with smooth motion, on the
+MiSTer: 14.0 ms a picture to 8.4, 56.3 pictures a second to 59.6, fields without a new picture
+605 of 9000 to 6 (`~/MiSTer-ReNFS/CLAUDE.md`). Still to try: 640x480 measured again (smooth
+motion there may now pay), and if more is wanted, the painting split over the ARM's two cores
+(the second only copies the pictures to the core). Not yet: pushing the `mister` branch and
+creating ItsDanik/ReNFS_MiSTer (Danik: after the optimisations).
 
 ## Waiting for Danik
 

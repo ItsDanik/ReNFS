@@ -223,6 +223,8 @@ Force feedback (NOTES §4.26, `ff.c`/`ffdev.c`): the original's I-Force commands
 `0x4ba10`, shakes, rumble, steady push), the game's side `0x4d670..0x4dcb6` (walls `0x4d878`, objects `0x4d730`,
 cars `0x4d7a4`, gears `0x4d8c0`, the road `0x4d9a8`, steady `0x4d928`, crash `0x4dc40`); played on SDL haptics or
 a pad's rumble; equal, `tools/ff_emu.py`. On the MiSTer a wheel's forces go through the framework's `MH_Force*` (`mister.c`), a pad rumbles.
+The painters made faster (NOTES §4.28, the port's own, every picture the same): a row's reads tested against the picture's
+memory once, not each pixel; no division in a row on the ARM (`div_row`, `div64`); 640x240/640x200 copy and work out only the rows shown.
 Smooth motion (NOTES §4.25, the port's own, `smooth.c`): the steps stay the original's 33.3 a second;
 each retrace's frame is drawn with the cars, camera and dials between the last two steps, then put back
 (F11, `renfs.cfg`); stepping faster (`0x12dd0c`) would make the game faster, not smoother.
@@ -294,6 +296,7 @@ every force-feedback command written with the race's step;
 `RENFS_SEED=n`: the race's random numbers seeded with n (else the time, as the original).
 `RENFS_RACE=t`, `RENFS_REPLAY=f`: as `--race t`, `--replay f` (the MiSTer's launcher gives no arguments); `RENFS_PERF=1`: every 5 s of a race,
 the pictures and steps a second, each picture's time, the slowest, the steps' share.
+`RENFS_SHOTSUMS=f`: under `--shot`, a sum of every picture shown written to f, a line a retrace (a change to the painters checked frame for frame, NOTES §4.28).
 `RENFS_REPLAYCHECK=1`: a replay played from the start compared with each of its snapshots instead of put back (2: every word that differs).
 `RENFS_SESSION=f`: the original's results (`nfsdos.py mem:` of `0x15cb68`, `0x12a150`, `0x14fae0`)
 put in as the standings begin (comparing the pages; `nfsdos.py poke:` writes test numbers in).

@@ -4259,6 +4259,49 @@ Danik's five on the core's Resolution line: 320x200, 320x240, 640x200, 640x240, 
   "a corrupt frame about twice a second"). A picture with new colours is now sent at once,
   not ahead (`retrace_mister`); the police's ticket had the same field.
 
+### 4.28 The painters made faster (2026-10-22; the port's own, `raster.c`, `sky.c`, `hud.c`)
+
+Danik: the heaviest scene on the MiSTer is a replay on the alpine track from the SKY camera
+(the replay's high chase view behind the player's car; REPLAY.RPL switches to it by itself
+from about 25 s) at 640x240. Every change keeps every picture: **`RENFS_SHOTSUMS=f`** writes a
+sum of each picture shown under `--shot` (its rows as shown and its colours), and the sums of
+the CD's four replays at the five sizes, three races driven (City 640x480, alpine 640x240
+from the seat, Burnt Sienna 320x240) and HUD (Bottom) lifted 12 (two replays, a coast race
+from outside) were equal before and after, frame for frame, on the PC and with the ARM build
+run under qemu (`qemu-arm` from the `mister-dxxrebirth-qemu` image, `-L` the toolchain's
+sysroot; `--shot` needs no core).
+
+- **Where the time went** (callgrind, 4,500 pictures of the replay at 640x240): the quads'
+  row painter (`span`) about half, of it 40 % the test of each pixel against the
+  picture's memory (`lo..hi`, the original reading its neighbours) and the carries; the
+  sky 1 M instructions a picture, half of it that test; the far road's triangles (`rows`,
+  about 400 a picture); the quads' edge tables.
+- **The test once a row**: the k-th pixel of a quad's row is the picture's at the whole parts
+  of u + k·du and v + k·dv (the carries stepped apart give exactly that), each going one way
+  along the row, so the row's first and last pixel bound all of them; a row inside is painted
+  without the test (`inside`), any other as before. The far road's triangles: the least and
+  greatest of the step table's first i entries kept as it is made (only steps made for this
+  triangle: a row past them is tested a pixel at a time, as the original's table keeps the
+  last triangle's there). The sky: each part's least and greatest step once a strip.
+- **The quads' rows** (ARM, `-O3`): the fractions at the top of a word, so their carry is the
+  add's (`adds`/`adc`, `adds`/`addcs`), the picture's width in a local (a byte store may alias
+  it, and was reloaded every pixel), opaque and see-through pictures in loops of their own:
+  9 and 10 instructions a pixel, from 14 with a reload and branches.
+- **No divide on the Cortex-A9**: each `/` is a call. A quad's row divides twice (its du, dv):
+  by a reciprocal (`div_row`: m = 2^(24+l)/n + 1, l the bits of n − 1, the same quotient for
+  |a| < 2^24 and n < 2048, Granlund and Montgomery 1994; 929 million cases checked, else
+  `/`). The triangles' 13 or so 64-bit divisions each (`__aeabi_ldivmod`, 100-250 cycles) by
+  a double where that is exact (`div64`: |n| < 2^53, the quotient's rounding cannot reach a
+  whole number; 300 million cases equal on the PC and under qemu, else the 64-bit division).
+- **640x240 / 640x200**: the view copied to the screen through the lists (`bamf_copy`) only
+  for the screen's rows shown, and the quads' u, v tables only for the rows painted (x stays
+  for every row: a row the wrong way round anywhere retries the quad). The rows not shown
+  are never seen: the pause menu is a whole picture, and HUD (Bottom) moves by even rows.
+- **On the MiSTer** (2026-10-22, REPLAY.RPL at 640x240 with smooth motion, `RENFS_PERF=1
+  MISTER_HYBRID_PACE=1`, from 30 s on, the SKY camera): a picture 14.0 ms on average to
+  **8.4** (the worst 5 s 16.7 to 9.7, the slowest picture 22.7 to 17.3), 56.3 pictures a
+  second (51.2 at worst) to **59.6** (59.1), fields without a new picture 605 of 9000 to 6.
+
 ## 5. The original in DOSBox (2026-10-19)
 
 - The game for DOSBox is a COPY of the installed game in `~/dosgames/nfs` (`NFSSE/` +
