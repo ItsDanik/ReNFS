@@ -25,8 +25,8 @@ void mister_present_at(void);
    where (it stays until the player leaves the core) */
 int mister_start(void);
 /* the core's joystick 1 as the original's joystick (joy_device): the stick, the brake,
-   the throttle (the triggers, or A and B all the way), its buttons 1 handbrake, 2 map,
-   4 camera, 8 horn and the port's 16 gear up, 32 gear down */
+   the throttle (the triggers, or A and B all the way), its buttons 1 horn (L3), 2 map,
+   4 camera, 8 handbrake and the port's 16 gear up, 32 gear down */
 int mister_joy(int count[4], int *buttons);
 void *mister_pad_sdl(void);            /* its SDL joystick (the rumble's) */
 /* in the menus: Menu OK as Enter, Menu Back as Esc (0 for neither) */

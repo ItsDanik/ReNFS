@@ -173,8 +173,8 @@ int mister_exit_code(void)
  * core's list ("J1" in core/ReNFS.sv) in its order, 28 and 29 the MiSTer menu's OK and
  * Back, 30 and 31 the sticks' clicks; the left stick axes 0 and 1, the triggers 4 and 5
  * (0..32767), the d-pad hat 0. Given to the game as the original's joystick: four axes
- * (the stick, the brake, the throttle) and its four buttons (1 handbrake, 2 map,
- * 4 camera, 8 horn), and the port's two (1 gear up, 2 gear down).
+ * (the stick, the brake, the throttle) and its four buttons (1 horn, 2 map,
+ * 4 camera, 8 handbrake: drive_keyboard 0x48bec), and the port's two (1 gear up, 2 gear down).
  */
 enum { J_ACCEL, J_BRAKE, J_GEAR_UP, J_GEAR_DOWN, J_CAMERA, J_HANDBRAKE, J_MAP, J_PAUSE,
        J_MENU_OK, J_MENU_BACK, J_OK = 28, J_BACK = 29, J_L3 = 30, J_R3 = 31 };
@@ -232,8 +232,8 @@ int mister_joy(int count[4], int *buttons)
     b = button(J_BRAKE) ? 511 : axis(4) >> 6;
     count[3] = 511 - (t > 511 ? 511 : t);
     count[2] = 511 - (b > 511 ? 511 : b);
-    *buttons = (button(J_HANDBRAKE) ? 1 : 0) | (button(J_MAP) ? 2 : 0)
-             | (button(J_CAMERA) ? 4 : 0) | (button(J_L3) ? 8 : 0)
+    *buttons = (button(J_L3) ? 1 : 0) | (button(J_MAP) ? 2 : 0)
+             | (button(J_CAMERA) ? 4 : 0) | (button(J_HANDBRAKE) ? 8 : 0)
              | (button(J_GEAR_UP) ? 16 : 0) | (button(J_GEAR_DOWN) ? 32 : 0);
     return 0xf;
 }
