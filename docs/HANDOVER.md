@@ -467,8 +467,20 @@ glyph's rows for that; not done here).
 
 Danik tried them all (2026-10-22: everything looks right, HUD (Bottom) and the movies
 included); the core's README has screenshots of the new sizes. The wheel forces are in
-Hybrid_MiSTer's main (merge 4fc0233, on GitHub). Open: ItsDanik/ReNFS_MiSTer, when Danik
-says.
+Hybrid_MiSTer's main (merge 4fc0233, on GitHub).
+
+Fixed after his tries the same day, and tried by him on the MiSTer (all good): the pause
+menu after its Replay and Done (the mouse's limits, 0x56d45); the race runs on while the
+OSD is open (as on his other cores); L3 the horn and Y the handbrake (they were swapped);
+the speech fed half a second ahead at every retrace (a showcase commentary converted at
+once held the game and the music 2 to 4 s); the films centred as the original (0x34c4e,
+the 320x192 ones 24 rows down). The last two also on `main`, pushed.
+
+**Next (Danik, 2026-10-22): make the rendering as fast as possible**, in a new session.
+The numbers to start from are in `~/MiSTer-ReNFS/CLAUDE.md` (Replay 1, `RENFS_PERF=1`;
+640x240 drops to 57 in busy scenes, 640x480 13-24 ms a picture). Every change must keep
+`tools/checks.sh` equal. Not yet: pushing the `mister` branch and creating
+ItsDanik/ReNFS_MiSTer (Danik: after the optimisations).
 
 ## Waiting for Danik
 
