@@ -105,8 +105,9 @@ int main(int argc, char **argv)
     if (!replay && getenv("RENFS_REPLAY") && *getenv("RENFS_REPLAY"))
         replay = getenv("RENFS_REPLAY");
 #ifdef MISTER_HYBRID
-    /* the MiSTer: the CD's files looked for, "Loading ..." on the core's picture; a
-       message that waits for the player to leave the core when they are not all there */
+    /* the MiSTer: the CD's files looked for, then the game's logo on the core's
+       picture; a message that waits for the player to leave the core when they are not
+       all there */
     if (!shot && !mister_start())
         return mister_exit_code();
 #endif

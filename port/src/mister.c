@@ -25,14 +25,14 @@ int mister_on(void)
     return MH_IsOpen();
 }
 
-/* the OSD's lines greyed: HUD (Bottom) (bit 0) while the races have 200 rows, Smooth
-   Motion (bit 1) while they are 640x480, HUD (Top) always (bit 2: the status bar stays
-   where the game has it) */
+/* the OSD's lines greyed: the HUD lines (bit 0) while the races have 200 rows, Smooth
+   Motion (bit 1) while they are 640x480 (HUD (Top) is greyed always by the core's
+   HUD_EDGES: the status bar stays where the game has it) */
 static void menu_mask(void)
 {
     static int was = -1;
     const int r = mister_resolution();
-    const int mask = (r == MR_320x200 || r == MR_640x200 ? 1 : 0) | (r == MR_640x480 ? 2 : 0) | 4;
+    const int mask = (r == MR_320x200 || r == MR_640x200 ? 1 : 0) | (r == MR_640x480 ? 2 : 0);
     if (mask != was) {
         MH_SetMenuMask(mask);
         was = mask;
@@ -67,7 +67,9 @@ void mister_retrace_wait(void)
 /*
  * THE GAME'S FILES. The CD in NFSSE/ in the game's folder; the files the game opens
  * there (English: the German ones, the G folders, are never opened on the MiSTer) are
- * looked for, so that one missing is said at the start and not found out in a race.
+ * looked for before the pick, so that one missing is said at the start and not found
+ * out in a race: the game is then not there, and its message names them, under the
+ * MiSTer logo with no game logo (host version 17).
  */
 static const char *const g_found[] = {   /* the game is there (MH_PickGame) */
     "NFSSE/NFS_DOS.EXE", "NFSSE/FRONTEND/ART/TITLE.QFS", "NFSSE/SIMDATA/MISC/*", NULL
@@ -111,42 +113,51 @@ static int has_file(const char *dir, const char *want)
     return 1;
 }
 
+/* the CD there with files missing: the message naming the first ones (%s the game's
+   folder, for MH_PickGame()), else NULL */
+static const char *game_missing(char *msg, size_t size)
+{
+    extern const char *const g_mister_files[];
+    char text[600] = "";
+    int missing = 0;
+    for (int i = 0; g_mister_files[i]; i++) {
+        if (has_file("NFSSE", g_mister_files[i]))
+            continue;
+        if (missing++ < 3) {
+            size_t l = strlen(text);
+            snprintf(text + l, sizeof text - l, "%s%s", l ? ", " : "", g_mister_files[i]);
+        }
+    }
+    printf("mister: %d of the CD's files missing\n", missing);
+    if (!missing)
+        return NULL;
+    if (missing > 3) {
+        size_t l = strlen(text);
+        snprintf(text + l, sizeof text - l, " and %d more", missing - 3);
+    }
+    snprintf(msg, size, "Files of the CD are missing in %%s/NFSSE: %s. Copy everything on "
+             "the CD, all the files and folders as they are.", text);
+    return msg;
+}
+
 int mister_start(void)
 {
-    static const mh_game game = { "SE", "Need for Speed SE", g_found, NULL, NO_GAME };
+    mh_game game = { "SE", "Need for Speed SE", g_found, NULL, NO_GAME };
+    char msg[1400];
+    const char *missing;
     if (!MH_Open())
         return 1;
-    if (MH_PickGame(&game, 1, NULL, NO_GAME, &g_listed) < 0)
+    missing = MH_GameFound(&game, NULL) ? game_missing(msg, sizeof msg) : NULL;
+    if (missing) {
+        game.files = MH_NOT_THERE;
+        game.missing = missing;
+    }
+    /* (its logo, "Checking Game Data...", "Game Data OK" and "Loading Need for Speed
+       SE..." are MH_PickGame()'s, host version 17) */
+    if (MH_PickGame(&game, 1, NULL, missing ? missing : NO_GAME, &g_listed) < 0)
         return 0;
     if (g_listed)
         setenv("RENFS_MISTER_LISTED", "1", 1);
-    {
-        /* every file the game opens, the first missing ones named */
-        extern const char *const g_mister_files[];
-        char text[600] = "", path[600];
-        int missing = 0;
-        for (int i = 0; g_mister_files[i]; i++) {
-            if (has_file("NFSSE", g_mister_files[i]))
-                continue;
-            if (missing++ < 3) {
-                size_t l = strlen(text);
-                snprintf(text + l, sizeof text - l, "%s%s", l ? ", " : "", g_mister_files[i]);
-            }
-        }
-        if (missing) {
-            char msg[1400];
-            if (missing > 3) {
-                size_t l = strlen(text);
-                snprintf(text + l, sizeof text - l, " and %d more", missing - 3);
-            }
-            snprintf(path, sizeof path, "%s/NFSSE", MH_GamePath());
-            snprintf(msg, sizeof msg, "Files of the CD are missing in %s: %s. Copy everything on "
-                     "the CD, all the files and folders as they are.", path, text);
-            mister_fatal(msg);
-            return 0;
-        }
-    }
-    MH_UI_Message(TITLE, "Loading Need for Speed SE...", 0);
     return 1;
 }
 
@@ -288,15 +299,14 @@ int mister_resolution(void)
     return r > MR_640x480 ? MR_320x200 : r;
 }
 
-/* the CRT Options' "HUD (Bottom)" (status bits 82..86): the core's entries 0..24 in order,
-   0 the default (the framework's lines start at 10) */
+/* the CRT Options' "HUD (Bottom)": 0..24 lines of a 240-line screen, 0 the default */
 int mister_hud_bottom(void)
 {
-    int n;
+    int top, bottom;
     if (!MH_IsOpen())
         return 0;
-    n = (int)(MH_OSDStatusHigh() >> (82 - 64) & 31);
-    return n > 24 ? 24 : n;
+    MH_HudMargins(&top, &bottom);
+    return bottom;
 }
 
 /* "D1O[27],Smooth Motion,On,Off": off at 640x480 whatever the line says */

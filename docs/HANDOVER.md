@@ -491,6 +491,13 @@ drawn where it was left; the cars drawn now as the original lists them (NOTES §
 `cars_list`). Not yet: pushing the `mister` branch and
 creating ItsDanik/ReNFS_MiSTer (Danik: after the optimisations).
 
+**Host version 17 (2026-10-23):** the core built against Hybrid_MiSTer's v17: the game's
+logo at its start (`~/MiSTer-ReNFS/package/logos/SE.png`, Danik's), the framework's own
+"Checking Game Data..." / "Game Data OK" / "Loading Need for Speed SE..." (`MH_PickGame()`; the
+port's own Loading message gone), the CD's files looked for before the pick (`mister.c`
+`game_missing()`: one missing, its message under the MiSTer logo and no game logo), HUD
+(Bottom) read with `MH_HudMargins()`, *Save Diagnostic Report*. Tried on the PC with fakecore.
+
 ## Waiting for Danik
 
 - Nothing open. (Decided 2026-10-20: 640x480 races for the PC, then a 60 fps mode, then
