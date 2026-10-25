@@ -9,7 +9,10 @@
 #include <string.h>
 
 #define IMAGE_LEN 0x169a10u            /* code 0x10000.., data + BSS 0xe0000..0x169a10 */
-#define IMAGE_SUM 0x76078ed2u          /* FNV-1a of the image: NFS_DOS.EXE of 1,254,591 bytes */
+/* FNV-1a of the image, for the two builds known, both of 1,254,591 bytes: 19 June 1996
+   and 17 June 1996 (the 1997 EA CD). They differ only in the give-up branch of 0x48bec and
+   one German text (0xe3814), neither read here (NOTES §1) */
+static const unsigned image_sums[] = { 0x76078ed2u, 0x21ef7c33u };
 #define MAX_PAGES 1024
 
 static unsigned char *g_image;
@@ -138,8 +141,13 @@ int exe_load(void)
     ok = img && place_pages(d, (unsigned long)len, le, img, page_va, base) &&
          relocate(d, (unsigned long)len, le, img, page_va, base);
     free(d);
-    if (!ok || fnv(img, IMAGE_LEN) != IMAGE_SUM) {
-        files_error("NFS_DOS.EXE in the game's folder is not the version ReNFS knows: it needs the CD of The Need for Speed Special Edition (1996, DOS).");
+    if (ok) {
+        unsigned sum = fnv(img, IMAGE_LEN), i;
+        for (i = 0, ok = 0; i < sizeof image_sums / sizeof image_sums[0]; i++)
+            ok |= sum == image_sums[i];
+    }
+    if (!ok) {
+        files_error("NFS_DOS.EXE in the game's folder is not the version ReNFS knows: it needs the CD of The Need for Speed Special Edition (DOS).");
         free(img);
         return 0;
     }

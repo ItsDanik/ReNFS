@@ -71,7 +71,7 @@ commit.
 
 ## The binary and how to decompile it
 
-`NFS_DOS.EXE`, 1,254,591 bytes, Watcom C/C++32 (1988–1995 runtime), DOS/4GW stub (11,392
+`NFS_DOS.EXE`, 1,254,591 bytes (two builds, 19 and 17 June 1996, the second on EA's 1997 CD: both accepted, NOTES §1), Watcom C/C++32 (1988–1995 runtime), DOS/4GW stub (11,392
 bytes) + **LE** image. Objects: 1 code `0x10000` (698,877 bytes), 2 code `0xC0000` (60),
 3 data `0xD0000` (24), 4 data + BSS + stack `0xE0000` (563,728). Entry `0x94444` (a jump
 over the Watcom banner to `0x944bc`); **`main` = `0x4716c`**. No symbols.

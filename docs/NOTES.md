@@ -27,6 +27,22 @@ are numbered; `CLAUDE.md` has the one-line summaries. Addresses are flat image a
   (`newnetgame`, `sendpacket`, ...), windows/text (`createwindow`, `setfont`,
   `textcolour`). Banner "(c)1994-95, EAC Inc. by DM, AS, PC, IM, KH, BP, et al." at
   `0xe6219`. Names: `tools/names.txt`.
+- **Two builds of `NFS_DOS.EXE`** (2026-10-25, a player's CD): both 1,254,591 bytes. The
+  one read here is dated 19 June 1996 (SHA-1 `cfbfdcc60b12c2841cf3ac7f938a996385294e70`);
+  EA's 1997 CD (DirectX 3 and EA's launcher added) has one dated 17 June 1996 (SHA-1
+  `acb8c16b5f53e4085cbce63dbf4b59a0f0a7794f`). Laid out and relocated they differ in two
+  places only: the give-up branch of `keys_control_word` `0x48bec` (at `0x494ef`: the
+  player's word written `0x7a0` and its bit 15 set, `0x000087a0`, where the other writes
+  `0xffff87a0`; the same low half; the function 4 bytes longer, so `0x494d7..0x49675` and
+  the call at `0x4904e`), and one German text at `0xe3814` ("Verbindung Keine" / "Keine
+  Verbindung"). The port reads neither and accepts both (`exe.c`, FNV-1a `0x76078ed2` and
+  `0x21ef7c33`): with every read checked against those bytes, the 1997 CD drew the same
+  pictures as the other in the front end, the four replays (equal at every snapshot) and
+  nine races. The rest of that CD: the files read are the same, but for three that differ
+  from ours in one bit each (`0x40` at byte `0xe0` of a sector: `TECHNO1.AS4`,
+  `CL2_T01.FAM`, `TR2_M01.FAM`), where the 1997 CD's bytes match their neighbours: our
+  copy's read errors (one pixel of TR2 mirrored in the morning). The German `GART/CHECK`
+  has no `LOOP6.FSH`, `LOOP7.FSH` and `PAUSE.FSB` there, which nothing opens.
 
 ## 2. The data
 
@@ -1796,7 +1812,7 @@ that packs the four pointers and screen points of a child.
   [--fallen]`).**
 - **The game's fixed tables come from the player's `NFS_DOS.EXE`** (`port/src/exe.c`: the
   LE image laid out and relocated as `unle.py --fixups`, checked by an FNV-1a of the
-  0x169a10 bytes = `0x76078ed2`, identical to `build/nfs_flat.bin`): the port holds none
+  0x169a10 bytes = `0x76078ed2`, identical to `build/nfs_flat.bin`, or `0x21ef7c33`, the 1997 CD's build, §1): the port holds none
   of the game's data, and reads `exe_i32(0xed284 + ..)` at the original's addresses.
 - Projection `0x83b5c(p, out)`: z ≤ `0xf7938` → (0x80000000, 0x80000000) and `0xf7a40`
   |= 1. Else z normalised below 0x400 with a shift (16; ≥ 0x10000: 24 and z >> 8; again
