@@ -41,6 +41,19 @@ static void menu_mask(void)
 
 static uint32_t g_field;           /* the field of the last retrace */
 static int g_field_ok;
+static int g_racing;
+
+/* the front end (640x480, interlaced on a 15 kHz screen) at field rate: a picture at every
+   field, 59.6 a second, not every second one (host version 18; Danik, 2026-10-28: "any
+   cores that have 480i should become 480i/60"). The game draws a picture at every retrace
+   (a field) and times itself by its 100 Hz clock and in retraces, so nothing in it runs
+   faster. Not a race:
+   its pictures at 640x480 stay one in two fields. Nothing in a progressive mode, or with
+   a core before host version 18. */
+static void field_rate(void)
+{
+    MH_SetFieldRate(!g_racing && MH_Height() >= 400);
+}
 
 void mister_present_at(void)
 {
@@ -53,6 +66,7 @@ void mister_retrace_wait(void)
     if (!MH_IsOpen())
         return;
     menu_mask();
+    field_rate();
     if (!g_field_ok) {
         g_field = MH_FieldCounter();
         g_field_ok = 1;
@@ -171,6 +185,7 @@ void mister_fatal(const char *text)
 
 int mister_exit_code(void)
 {
+    MH_SetFieldRate(0);           /* (the core's picture next, or another program) */
     if (MH_CoreReloaded())
         return EXIT_RELOADED;
     /* a game picked from the core's list: the list again (not when another core was loaded) */
@@ -277,11 +292,11 @@ int mister_nitro_held(void)
     return button(J_R3);
 }
 
-static int g_racing;
-
 void mister_racing(int on)
 {
     g_racing = on;
+    if (MH_IsOpen())
+        field_rate();
 }
 
 int mister_is_racing(void)
