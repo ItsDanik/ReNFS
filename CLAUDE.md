@@ -57,7 +57,7 @@ stalls, find the code that reads the field.**
 - **A first start uses the game's built-in settings and records** (`cfg_defaults`
   `0x38ea8`, as an installed original), never the CD's CONFIG.DAT (Danik, 2026-10-19).
 - GitHub (Danik, 2026-10-21): **`github.com/ItsDanik/ReNFS`, public, GPL-3**, branch `main`
-  (local and remote). 0.6.0b released 2026-10-21, 0.6.7b and 0.6.9b 2026-10-22 (Linux, Windows); ask before creating the
+  (local and remote). 0.6.0b released 2026-10-21, 0.6.7b and 0.6.9b 2026-10-22, 0.6.11b 2026-10-29 (Linux, Windows); ask before creating the
   MiSTer core's repository.
 
 ## Legal
