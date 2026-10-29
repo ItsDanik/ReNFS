@@ -18,15 +18,17 @@
 #include <time.h>
 
 static const char usage[] =
-    "ReNFS " RENFS_VERSION ": The Need for Speed SE, for Linux and Windows.\n"
+    "ReNFS " RENFS_VERSION ": The Need for Speed SE, for Linux, Windows and macOS.\n"
     "\n"
     "    renfs [-data <folder>] [-home <folder>] [-lang de] [--shot <file.ppm> <frames>]\n"
     "          [--race <track>] [--replay <file.rpl> [highlights]] [--version]\n"
     "\n"
     "  -data <folder>   the game: the CD's files as they are (else $RENFS_DATA, else\n"
-    "                   ./NFSSE, else NFSSE beside the program)\n"
+    "                   ./NFSSE, else NFSSE beside the program; on macOS beside\n"
+    "                   ReNFS.app, else in the home folder)\n"
     "  -home <folder>   the port's own settings (else $RENFS_HOME, else ~/.config/renfs;\n"
-    "                   on Windows %APPDATA%\\renfs)\n"
+    "                   on Windows %APPDATA%\\renfs, on macOS\n"
+    "                   ~/Library/Application Support/renfs)\n"
     "  -lang de         the German game (the CD holds both; else $RENFS_LANG)\n"
     "  --shot <f> <n>   no window: write the picture of retrace n (60 a second) to f\n"
     "  --race <track>   straight into a race on the track (cy1 .. al3, tr1 .. tr7,\n"
@@ -89,6 +91,10 @@ int main(int argc, char **argv)
             if (i + 1 < argc && !strcmp(argv[i + 1], "highlights"))
                 highlights = ++i;
         }
+#ifdef __APPLE__
+        else if (!strncmp(argv[i], "-psn_", 5))
+            ;                  /* (the Finder's process number, given by older macOS) */
+#endif
         else if (!strcmp(argv[i], "--version")) {
             puts("ReNFS " RENFS_VERSION);
             return 0;
@@ -98,10 +104,21 @@ int main(int argc, char **argv)
         }
     }
     if (!files_init(data, home)) {
+#ifdef __APPLE__
+        char text[1400];   /* (the home folder made, ready for the files) */
+        snprintf(text, sizeof text, "The game's files were not found. Copy the whole CD of The "
+                 "Need for Speed SE into a folder named NFSSE next to ReNFS.app (after moving "
+                 "ReNFS.app out of Downloads) or into %s/NFSSE, or name the folder with -data "
+                 "<folder>.", files_home());
+#endif
         files_error(data || getenv("RENFS_DATA")
                     ? "The game's files are not in the folder given (FRONTEND/ART/TITLE.QFS is missing)."
+#ifdef __APPLE__
+                    : text);
+#else
                     : "The game's files were not found. Copy the whole CD of The Need for Speed SE "
                       "into a folder named NFSSE next to ReNFS, or name the folder with -data <folder>.");
+#endif
         return 1;
     }
     if (lang)                  /* (else $RENFS_LANG, files_init) */

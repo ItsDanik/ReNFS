@@ -76,7 +76,28 @@ int files_init(const char *data_arg, const char *home_arg)
 {
     const char *tries[4];
     char beside[1024] = "";
+#ifdef __APPLE__
+    char in_home[1024];
+#endif
     int n = 0;
+
+    if (home_arg)
+        snprintf(g_home, sizeof g_home, "%s", home_arg);
+    else if (getenv("RENFS_HOME"))
+        snprintf(g_home, sizeof g_home, "%s", getenv("RENFS_HOME"));
+#ifdef _WIN32
+    else if (getenv("APPDATA"))
+        snprintf(g_home, sizeof g_home, "%s/renfs", getenv("APPDATA"));
+#endif
+#ifdef __APPLE__
+    else if (getenv("HOME"))
+        snprintf(g_home, sizeof g_home, "%s/Library/Application Support/renfs", getenv("HOME"));
+#else
+    else if (getenv("HOME"))
+        snprintf(g_home, sizeof g_home, "%s/.config/renfs", getenv("HOME"));
+#endif
+    else
+        snprintf(g_home, sizeof g_home, ".");
 
     /* a folder asked for is that folder or none */
     int asked = data_arg || (getenv("RENFS_DATA") && *getenv("RENFS_DATA"));
@@ -89,10 +110,27 @@ int files_init(const char *data_arg, const char *home_arg)
     if (!asked) {              /* else NFSSE beside the program */
         char *base = SDL_GetBasePath();
         if (base) {
+#ifdef __APPLE__
+            /* in ReNFS.app the base is the bundle's Contents/Resources/: beside the bundle */
+            size_t len = strlen(base);
+            static const char res[] = ".app/Contents/Resources/";
+            if (len > sizeof res - 1 && !strcmp(base + len - (sizeof res - 1), res)) {
+                char *end = base + len - (sizeof res - 1);
+                while (end > base && end[-1] != '/')
+                    end--;
+                *end = 0;
+            }
+#endif
             snprintf(beside, sizeof beside, "%sNFSSE", base);
             SDL_free(base);
             tries[n++] = beside;
         }
+#ifdef __APPLE__
+        /* else NFSSE in the home folder: a downloaded app is started from a hidden copy
+           of itself (App Translocation) until it is moved, and sees nothing beside it */
+        snprintf(in_home, sizeof in_home, "%s/NFSSE", g_home);
+        tries[n++] = in_home;
+#endif
     }
     g_data[0] = 0;
     for (int i = 0; i < n; i++) {
@@ -102,19 +140,6 @@ int files_init(const char *data_arg, const char *home_arg)
         }
     }
 
-    if (home_arg)
-        snprintf(g_home, sizeof g_home, "%s", home_arg);
-    else if (getenv("RENFS_HOME"))
-        snprintf(g_home, sizeof g_home, "%s", getenv("RENFS_HOME"));
-#ifdef _WIN32
-    else if (getenv("APPDATA"))
-        snprintf(g_home, sizeof g_home, "%s/renfs", getenv("APPDATA"));
-#endif
-    else if (getenv("HOME"))
-        snprintf(g_home, sizeof g_home, "%s/.config/renfs", getenv("HOME"));
-    else
-        snprintf(g_home, sizeof g_home, ".");
-
     if (getenv("RENFS_LANG") && strncasecmp(getenv("RENFS_LANG"), "de", 2) == 0)
         g_german = 1;
     return g_data[0] != 0;
@@ -122,7 +147,8 @@ int files_init(const char *data_arg, const char *home_arg)
 
 const char *files_home(void)
 {
-    mkdir(g_home, 0755);           /* ~/.config (%APPDATA%) is there already; one level is enough */
+    mkdir(g_home, 0755);           /* ~/.config (%APPDATA%, ~/Library/Application Support) is
+                                      there already; one level is enough */
     return g_home;
 }
 

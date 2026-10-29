@@ -1,7 +1,7 @@
 # ReNFS
 
 *The Need for Speed Special Edition* (Electronic Arts Canada, 1996, MS-DOS), written again
-for **Linux and Windows** by reading the original program. A MiSTer version is next.
+for **Linux, Windows and macOS** by reading the original program. A MiSTer version is next.
 
 The whole single-player game is in: every car and track, head to head, single race, time
 trial, tournaments, the rally, the police, the traffic, replays and highlights, the cars'
@@ -41,7 +41,7 @@ Speed SE* CD, as they are.
    next to the program:
 
    ```
-   renfs                      (renfs.exe on Windows)
+   renfs                      (renfs.exe on Windows, ReNFS.app on macOS)
    NFSSE/NFS_DOS.EXE
    NFSSE/FRONTEND/...
    NFSSE/GAMEDATA/...
@@ -65,11 +65,18 @@ Built programs are on the [releases page](https://github.com/ItsDanik/ReNFS/rele
   systems have (`sudo apt install libsdl2-2.0-0` on Debian, Ubuntu and Mint, `sudo dnf
   install SDL2` on Fedora, `sudo pacman -S sdl2` on Arch). Unpack it, put the `NFSSE`
   folder next to `renfs`, run `./renfs`.
+- **macOS** (10.13 or later, Apple silicon or Intel): `renfs-<version>-macos.zip`. Unpack
+  it, move `ReNFS.app` out of Downloads (to Applications or a folder of your own), put the
+  `NFSSE` folder next to it (or in `~/Library/Application Support/renfs/`), double-click
+  `ReNFS.app`. It is not signed by Apple: the first time, macOS refuses it; open it with
+  System Settings → Privacy & Security → *Open Anyway* (on macOS 14 and older: right-click
+  → Open), or run `xattr -dr com.apple.quarantine ReNFS.app` once.
 
 ## Playing
 
 The menus work with the mouse, or the arrows, Enter and Esc. **Alt+Enter** switches between
-a window and the whole screen.
+a window and the whole screen (on a Mac Option+Return or Cmd+Return; F1..F11 may need fn,
+End is fn+→).
 
 **Driving** (as the original; every key can be changed in Options → Controls):
 
@@ -143,7 +150,8 @@ shaking and the steady pull of the car's forces.
 
 ### Settings and saves
 
-They go to `~/.config/renfs` on Linux and `%APPDATA%\renfs` on Windows (or `-home
+They go to `~/.config/renfs` on Linux, `%APPDATA%\renfs` on Windows and
+`~/Library/Application Support/renfs` on macOS (or `-home
 <folder>`), never into the game's folder: the game's settings and records, saved
 tournaments (`<name>.sav`), replays, the joystick's calibration, and `renfs.cfg`, ReNFS's
 own settings:
@@ -157,19 +165,22 @@ forcefeedback 100   the strength of rumble and force feedback, 0 to 100; 0 none
 ### Language
 
 English, as the CD starts. For German start it with `-lang de` (the CD holds both; on
-Windows, a shortcut to `renfs.exe` with `-lang de` after it).
+Windows, a shortcut to `renfs.exe` with `-lang de` after it; on macOS `open ReNFS.app --args
+-lang de` in Terminal).
 
 ## Building from source
 
-SDL2 (the development package), CMake and a C compiler:
+SDL2 (the development package), CMake and a C compiler (on macOS: Xcode's command line
+tools and `brew install sdl2 cmake pkg-config`):
 
 ```sh
 cmake -S port -B port/build && cmake --build port/build
 port/build/renfs -data <the CD's folder>
 ```
 
-`renfs --help` lists the options. `tools/release_linux.sh` and `tools/release_windows.sh`
-make the release packages (a Debian 11 container, and MinGW-w64).
+`renfs --help` lists the options. `tools/release_linux.sh`, `tools/release_windows.sh` and
+`tools/release_macos.sh` make the release packages (a Debian 11 container, MinGW-w64, and
+on a Mac a universal `ReNFS.app` with SDL2 inside).
 
 ## How it was made
 

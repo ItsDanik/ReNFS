@@ -9,6 +9,10 @@
 #include "files.h"
 #include "ffdev.h"
 #include <SDL.h>
+#ifdef __APPLE__
+#include <SDL_syswm.h>
+#include <objc/message.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -291,6 +295,32 @@ static void write_shot(void)
    menu in a race, back in the menus) */
 static int g_pad_esc;
 
+/* Alt+Enter, on macOS Cmd+Enter too */
+#ifdef __APPLE__
+#define FULLSCREEN_MOD (KMOD_ALT | KMOD_GUI)
+#else
+#define FULLSCREEN_MOD KMOD_ALT
+#endif
+
+/* the whole screen: SDL's, or on macOS the one entered with the green button or Ctrl+Cmd+F,
+   which SDL 2 does not count as its own (the window's style says it: NSWindowStyleMaskFullScreen;
+   its size does not, below a screen's notch) */
+static int window_full(void)
+{
+    if (SDL_GetWindowFlags(g_win) & SDL_WINDOW_FULLSCREEN_DESKTOP)
+        return 1;
+#ifdef __APPLE__
+    SDL_SysWMinfo wm;
+    SDL_VERSION(&wm.version);
+    if (SDL_GetWindowWMInfo(g_win, &wm) && wm.subsystem == SDL_SYSWM_COCOA && wm.info.cocoa.window) {
+        unsigned long style = ((unsigned long (*)(void *, SEL))objc_msgSend)(
+            (void *)wm.info.cocoa.window, sel_registerName("styleMask"));
+        return (style & (1ul << 14)) != 0;
+    }
+#endif
+    return 0;
+}
+
 static void poll(void)
 {
     SDL_Event e;
@@ -320,15 +350,25 @@ static void poll(void)
                 scan_put(1);
                 key_put(0x1b);
             }
-        } else if (e.type == SDL_KEYDOWN && (e.key.keysym.mod & KMOD_ALT)
+        } else if (e.type == SDL_KEYDOWN && (e.key.keysym.mod & FULLSCREEN_MOD)
                    && (e.key.keysym.sym == SDLK_RETURN || e.key.keysym.sym == SDLK_KP_ENTER)) {
             /* (the port's) Alt+Enter: the whole screen or a window, kept in renfs.cfg; the
                game sees no Enter */
-            int full = !(SDL_GetWindowFlags(g_win) & SDL_WINDOW_FULLSCREEN_DESKTOP);
+            int full = !window_full();
             if (!e.key.repeat) {
+                /* (macOS: a full screen SDL did not make is first called its own, which it
+                   takes as there already, so that it can leave it) */
+                if (!full && !(SDL_GetWindowFlags(g_win) & SDL_WINDOW_FULLSCREEN))
+                    SDL_SetWindowFullscreen(g_win, SDL_WINDOW_FULLSCREEN_DESKTOP);
                 SDL_SetWindowFullscreen(g_win, full ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
                 files_cfg_set("fullscreen", full);
             }
+        } else if (e.type == SDL_WINDOWEVENT && e.window.event == SDL_WINDOWEVENT_SIZE_CHANGED
+                   && !g_shot) {
+            /* the whole screen or a window chosen some other way (macOS's own): kept too */
+            int full = window_full();
+            if (full != files_cfg_get("fullscreen", 0))
+                files_cfg_set("fullscreen", full);
         } else if (e.type == SDL_KEYDOWN) {
             for (int k = 1; k < 0x59; k++)
                 if (e.key.keysym.scancode == g_pc_keys[k][0] || (g_pc_keys[k][1]

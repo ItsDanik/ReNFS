@@ -266,7 +266,8 @@ retrace (60 a second at 640x480, 70 at 320x200, kept whatever the monitor); the 
 palette fades, step for step). The 100 Hz clock is real time, or the retraces counted
 under `--shot`. The game's blocking loops stay loops that wait for a retrace.
 Data folder: `-data`, else `$RENFS_DATA`, else `./NFSSE`, else `NFSSE` beside the program
-(a folder asked for is used or refused). Home: `-home`, `$RENFS_HOME`, `~/.config/renfs`
+(a folder asked for is used or refused; on macOS beside `ReNFS.app`, then `<home>/NFSSE`).
+Home: `-home`, `$RENFS_HOME`, `~/.config/renfs` (macOS `~/Library/Application Support/renfs`)
 (the port's own formats, never the game's files). `RENFS_LANG=de`: the German art;
 `RENFS_NOSOUND=1`: no sound; `RENFS_SNDWAV=f`: what is heard written to a WAV (checking);
 `RENFS_JOY=1|2`: a test joystick of 4 or 2 axes moved by `RENFS_INPUT`'s jl jr ju jd (the stick), jg jk
@@ -354,12 +355,16 @@ original's screenshots by palette entry (DOSBox Staging changes colours slightly
 Version = `VERSION` + one per commit since it changed (`tools/version.sh`, `renfs --version`);
 nobody edits a number to commit; a new series: write e.g. `0.7.0b` into `VERSION`.
 Releases: `tools/release_linux.sh` (the `mister-hybrid-tc` Debian 11 container: glibc 2.14, SDL
-2.0.9: **use no SDL function newer than 2.0.9**, check with `objdump -T`) and
+2.0.9: **use no SDL function newer than 2.0.9**, check with `objdump -T`),
 `tools/release_windows.sh` (MinGW-w64, SDL2.dll beside it; tested under wine: the pictures and
-the replay checks equal to Linux's); packages in `dist/` (ignored), the players' READMEs
+the replay checks equal to Linux's) and `tools/release_macos.sh` (on a Mac: a universal
+`ReNFS.app`, arm64 + x86_64, macOS 10.13+, SDL2 built from source into `Contents/Frameworks`,
+signed ad hoc; the four replays equal at every snapshot on both, x86_64 under Rosetta);
+packages in `dist/` (ignored), the players' READMEs
 `tools/release_*_readme.txt`; a GitHub pre-release `v<version>` while beta. The port's Windows
 differences are in `files.c` (the program's folder by `SDL_GetBasePath`, home `%APPDATA%\renfs`,
-`_mkdir`); `long` is 32 bits there (lengths only). Errors a player must see go through
+`_mkdir`); `long` is 32 bits there (lengths only). macOS's (`__APPLE__`): `files.c` (the bundle's
+folder, the home folder), Cmd+Return as Alt+Enter (`video.c`), `-psn_` ignored (`main.c`). Errors a player must see go through
 `files_error` (a message window). `renfs.cfg` (`files_cfg_get`/`_set`): smooth, fullscreen
 (Alt+Enter), forcefeedback; `-lang de`.
 

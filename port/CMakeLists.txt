@@ -49,6 +49,9 @@ add_executable(renfs
 target_include_directories(renfs PRIVATE ${SDL2_INCLUDE_DIRS})
 target_compile_options(renfs PRIVATE ${SDL2_CFLAGS_OTHER})
 target_link_libraries(renfs PRIVATE ${SDL2_LDFLAGS})
+if(APPLE)
+  target_link_libraries(renfs PRIVATE objc)   # (the window's style asked, video.c)
+endif()
 
 # the version (../VERSION + commits since, see tools/version.sh), looked up at every build
 add_custom_target(renfs_version
