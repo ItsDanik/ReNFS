@@ -427,13 +427,16 @@ releases"). For it: the Windows build (`files.c`), error messages in a window
 for players first. Windows tried under wine only (the same pictures as Linux, a replay
 equal at every snapshot): Danik's real Windows is the open check.
 
-**macOS** (2026-10-26, in the fork `github.com/AndyGura/ReNFS`): the port builds and runs on
+**macOS** (Andy Gura's pull request #1, merged 2026-10-29): the port builds and runs on
 a Mac as it is (Apple clang, Homebrew's SDL2); `__APPLE__` changes only where files live
 (`~/Library/Application Support/renfs`, the CD's folder beside `ReNFS.app` or in that home
 folder, since an app run from Downloads is translocated) and Cmd+Return. `tools/release_macos.sh`
 makes a universal `ReNFS.app`. Checked on an M-series Mac: the four replays equal at every
 snapshot on arm64 and on x86_64 (Rosetta), a race and the films drawn, the bundle started
 from the Finder. Not tried: a real Intel Mac, macOS older than the one here.
+Here, after the merge: Linux and Windows (wine) unchanged, the menus' and the four replays'
+pictures equal before and after. **Andy makes the macOS release packages** (Danik, 2026-10-29):
+we have no Mac.
 
 **Progress page for Danik**: https://claude.ai/artifact/VZdxTpYC3oLXYeBVJpoDoM (every step,
 its percent done and weight). Update its steps file after each finished step.

@@ -59,6 +59,8 @@ stalls, find the code that reads the field.**
 - GitHub (Danik, 2026-10-21): **`github.com/ItsDanik/ReNFS`, public, GPL-3**, branch `main`
   (local and remote). 0.6.0b released 2026-10-21, 0.6.7b and 0.6.9b 2026-10-22, 0.6.11b 2026-10-29 (Linux, Windows); ask before creating the
   MiSTer core's repository.
+- macOS (Danik, 2026-10-29): Andy Gura's pull request #1 merged; **Andy makes the macOS
+  release packages** (`tools/release_macos.sh` needs a Mac).
 
 ## Legal
 
